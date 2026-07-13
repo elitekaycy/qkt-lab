@@ -118,7 +118,7 @@ def test_high_impact_event_inside_window_blocks(cfg):
             "event": "US CPI",
             "at": (NOW + timedelta(minutes=20)).isoformat(),
             "impact": "high",
-            "affects": ["ICM:XAUUSD"],
+            "affects": ["EXNESS:XAUUSD"],
         }
     ]
     r = check(
@@ -133,7 +133,7 @@ def test_event_outside_window_does_not_block(cfg):
             "event": "US CPI",
             "at": (NOW + timedelta(minutes=90)).isoformat(),
             "impact": "high",
-            "affects": ["ICM:XAUUSD"],
+            "affects": ["EXNESS:XAUUSD"],
         }
     ]
     r = check(
@@ -159,7 +159,7 @@ def test_event_for_another_symbol_does_not_block(cfg):
 
 def test_low_impact_event_does_not_block(cfg):
     ev = [
-        {"event": "minor survey", "at": NOW.isoformat(), "impact": "low", "affects": ["ICM:XAUUSD"]}
+        {"event": "minor survey", "at": NOW.isoformat(), "impact": "low", "affects": ["EXNESS:XAUUSD"]}
     ]
     r = check(
         cfg, cfg.instruments[0], proposal(), equity=10000, book=FLAT, lots=0.13, events=ev, now=NOW

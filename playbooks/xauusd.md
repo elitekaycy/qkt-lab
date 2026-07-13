@@ -7,7 +7,7 @@ slowly as the journal teaches us things.
 ## The instrument
 
 - Spot gold vs USD. 1 lot = 100 oz, so a $1 move = $100/lot.
-- Prefixed symbol `ICM:XAUUSD`; the venue-side symbol may carry a broker suffix.
+- Prefixed symbol `EXNESS:XAUUSD`; the venue-side symbol may carry a broker suffix.
 - Spread is tightest during London and New York; Asian-session spreads and thin
   books make most setups untradeable — the bar for an Asia trade is much higher.
 

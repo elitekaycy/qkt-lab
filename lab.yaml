@@ -20,7 +20,7 @@ lab:
 qkt:
   bin: qkt                            # the qkt CLI on PATH
   config: ./qkt.config.yaml           # qkt's own config (brokers, gateway urls)
-  broker: ICM                         # the broker prefix used in BROKER:SYMBOL
+  broker: EXNESS                      # the broker prefix used in BROKER:SYMBOL
   timeout_s: 30
   retries: 2                          # qkt's bot verbs use retryAttempts=0, so
                                       # the lab owns transient-failure retry.
@@ -29,7 +29,7 @@ qkt:
 # What we trade.
 # ---------------------------------------------------------------------------
 instruments:
-  - symbol: ICM:XAUUSD
+  - symbol: EXNESS:XAUUSD
     contract_value: 100               # 1 lot = 100 oz. Used for position sizing.
     playbook: playbooks/xauusd.md
     schedule: "0 * * * *"             # hourly, on the 1h bar close
@@ -39,9 +39,9 @@ instruments:
                                       # the risk model normally produces, or it binds on
                                       # every trade and silently becomes the only sizing
                                       # rule — the risk model goes inert and you don't
-                                      # notice. At 0.5% risk on a ~$4 gold stop with 10k
-                                      # equity, typical size is ~0.13 lots. This cap is
-                                      # for outliers (a very tight stop), not normal days.
+                                      # notice. At 0.5% risk on a ~$4 gold stop with the
+                                      # $1k demo account, typical size is ~0.01 lots.
+                                      # This cap is for outliers, not normal days.
 
 # ---------------------------------------------------------------------------
 # The agent. Three separate sessions, three separate prompts, three separate
@@ -188,7 +188,7 @@ journal:
     user_id: local-dashboard-user
     user_email: local-dashboard@deltalytix.local
     account_number: LAB-XAU
-    starting_balance: 10000           # required for the equity curve to render
+    starting_balance: 1000            # required for the equity curve to render
     charts_base_url: http://localhost:8080/charts   # images[] must be URLs, not paths
     export_no_trades: false           # NO_TRADE/GATED rows cannot exist in its schema.
                                       # They stay in the lab store where the machine
