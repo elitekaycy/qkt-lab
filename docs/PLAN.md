@@ -118,6 +118,29 @@ start believing it"* is the first question, and it has an answer.
 
 ---
 
+### Everything runs from compose
+
+`docker compose up -d` brings the loop; `--profile journal` adds the UI, and stopping
+it doesn't stop the loop. → [`DEPLOYMENT.md`](DEPLOYMENT.md)
+
+Services: `mt5-gateway` (published image) · `lab` (qkt CLI + claude CLI + python, one
+shot) · `scheduler` (supercronic, crontab generated from `lab.yaml`) · `postgres` ·
+`charts` (static, so Deltalytix's `images[]` URLs resolve) · optional `deltalytix` +
+its own db.
+
+Two rules that are correctness requirements, not preferences:
+
+- **`memory/` and `KILL` are bind mounts, never named volumes.** `memory/` is
+  git-tracked — it's the agent's intellectual history, and trapped inside a Docker
+  volume it may as well not exist. `KILL` is the emergency stop; if the container
+  can't see `touch KILL` on the host, the emergency stop doesn't exist.
+- **Anything a human reads or writes is a bind mount. Anything only a machine touches
+  is a volume.**
+
+Two open dependencies: `claude -p` must work headless *in a container* on the Max pool
+(spike S0.4), and qkt needs a **published image** — its compose builds `qkt:local` from
+source, which is fatal to the clone-and-run claim.
+
 ## Part 4 — The phases
 
 Each phase ships a working system. No phase is a refactor of the last.
