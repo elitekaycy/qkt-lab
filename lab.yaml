@@ -71,16 +71,56 @@ agent:
       surprise_vs_consensus: true     # a release printed far off forecast
 
 # ---------------------------------------------------------------------------
-# Risk. Deterministic, evaluated in code, before every order. The model never
-# sees these as suggestions — it never sees them at all.
+# Risk and sizing. See docs/SIZING.md.
+#
+# The model DOES determine size — that is the job of a portfolio manager. What it
+# does not do is pick a number freely. It states a conviction; code composes that
+# with a risk budget, volatility, and the correlation of the existing book.
+#
+# A fund gives its PM a risk budget, measures whether their conviction was any
+# good, and adjusts the budget accordingly. Small book, prove yourself, book grows.
 # ---------------------------------------------------------------------------
 risk:
-  risk_per_trade_pct: 0.5             # of equity, per trade. Sizing is arithmetic:
-                                      #   lots = (equity * pct) / (|entry-sl| * contract_value)
-  conviction_scaling: false           # if true, model conviction scales size within
-                                      # [0.5x, 1.0x]. Off until conviction is shown
-                                      # to be calibrated (phase 6).
+  risk_per_trade_pct: 0.5             # of equity, per trade, at conviction-neutral
+  portfolio_heat_pct: 2.0             # total open risk across the whole book
+  correlation_threshold: 0.6          # above this, two positions SHARE a risk budget
+                                      # rather than each getting their own. Long gold
+                                      # + short DXY + long silver is one trade wearing
+                                      # three hats.
 
+sizing:
+  # lots = (equity × risk_pct / (stop_distance × contract_value))   <- vol-targeted:
+  #        × f(conviction)                                             ATR-derived stops
+  #        × correlation_haircut(open book)                            keep risk constant
+  #        capped by max_lots and portfolio_heat_pct                   in R across regimes
+  stage: flat                         # flat | fitted
+                                      #
+                                      # flat   — conviction is RECORDED on every decision
+                                      #          but multiplier is 1.0. Where we start.
+                                      # fitted — conviction drives real size, via a curve
+                                      #          FITTED to realized outcomes.
+                                      #
+                                      # `fitted` is not a config edit made on a hunch. It
+                                      # requires a calibration report showing that high-
+                                      # conviction trades actually outperform (monotone
+                                      # mean-R across buckets, confidence intervals that
+                                      # separate). The code refuses otherwise.
+                                      #
+                                      # If conviction turns out uncorrelated with outcome,
+                                      # this stays `flat` forever — and we have learned
+                                      # that the model thinks it knows when it is right
+                                      # and doesn't. That is the project working.
+
+  conviction_max_mult: 2.0            # hard ceiling on f(), whatever the fit says
+  kelly_fraction: 0.5                 # fractional Kelly. NEVER 1.0 — full Kelly is
+                                      # growth-optimal only if the edge estimate is
+                                      # exactly right, and catastrophically over-levered
+                                      # when it isn't. With n=19 in the top bucket, it
+                                      # won't be.
+  fit: null                           # written by the calibration report. Not by hand.
+
+# The risk officer is not the PM. These are evaluated in code AFTER the proposal
+# exists. The model never sees them and cannot argue with them.
 gates:                                # ALL must pass. Any rejection = no order.
   require_sl: true                    # no stop, no trade. Never disable.
   min_rr: 1.5                         # recomputed from real prices; the model's
@@ -150,36 +190,55 @@ journal:
                                       # learns from them.
 
 # ---------------------------------------------------------------------------
-# Data sources. Each is a plugin behind fetch(symbol, now) -> [Signal].
-# A missing source is recorded as MISSING, never as a neutral reading.
+# Data sources.
+#
+# THIS IS NOT A WHITELIST. These are SEEDS — starting points. The agent discovers
+# its own sources, records what each was good for and whether its information was
+# borne out, and writes down the recipe that reached it so it never re-derives it.
+#
+#   memory/sources/     — the living registry, WRITTEN BY RESEARCH
+#   memory/procedures/  — the working recipe for each (the curl that returns valid
+#                         JSON, the scrape that survives, the release-time gotcha)
+#
+# Harvest reads the REGISTRY, not this list. Reach compounds — that is the point.
+# A missing source is recorded as MISSING, never as a neutral reading, or every
+# belief conditioned on it is quietly poisoned.
 # ---------------------------------------------------------------------------
-sources:
-  calendar:
-    enabled: true
-    provider: ${CALENDAR_PROVIDER}    # pinned by the phase-0 spike
-    high_impact_only: true            # only high-impact events gate
+source_seeds:
+  - kind: calendar                    # the only source that GATES. Fail-closed:
+    provider: ${CALENDAR_PROVIDER}    # if the calendar is unreachable, the loop
+    high_impact_only: true            # refuses to trade rather than trade blind
+                                      # through CPI. Pinned by spike S0.5.
 
-  fred:
-    enabled: true
+  - kind: fred
     api_key: ${FRED_API_KEY}
     series: [DFII10, DTWEXBGS, T10Y2Y]   # 10y real yield, dollar index, curve
     refresh: daily
 
-  reddit:
-    enabled: true
+  - kind: reddit
     client_id: ${REDDIT_CLIENT_ID}
     client_secret: ${REDDIT_CLIENT_SECRET}
-    subreddits: [Gold, wallstreetbets, commodities]
+    subreddits: [Gold, commodities]
     max_posts: 50
     digest_max_tokens: 200            # a bounded digest, never a raw dump
-    # Sentiment is logged as a FACTOR and gates nothing. Whether it has any
-    # relationship to realized R is a question the belief loop answers, not one
-    # we assume. If it doesn't, it gets an INVALIDATED belief and we stop paying.
+    # Sentiment is logged as a FACTOR and gates nothing. Whether it relates to
+    # realized R at all is a question the belief loop ANSWERS, not one we assume.
+    # If it doesn't, it earns an INVALIDATED belief and we stop paying for it.
 
-  x:
-    enabled: false                    # X has no free read API — the free tier is
-                                      # write-only, reading needs the paid plan.
-                                      # Off until someone decides to pay.
+  # X is not seeded: its free tier is write-only, reading requires the paid plan.
+  # A cost decision, not a technical one. Deferred, not forgotten.
+
+research:
+  # RESEARCH is open-ended, not unbounded. It may go anywhere; it must come back
+  # with durable artifacts (a graph node, an edge, a source card, a procedure) —
+  # never a paragraph of prose that gets read once and lost. An unbounded web-search
+  # agent with no output contract produces beautiful narratives and no knowledge,
+  # and recency-biased narratives are exactly how LLMs get confidently wrong about
+  # markets.
+  web_search: true
+  respect_robots_txt: true            # non-negotiable
+  rate_limit_rps: 1
+  max_new_sources_per_run: 10         # so the registry grows deliberately, not in a burst
 
 # ---------------------------------------------------------------------------
 # Phase 6. The experiment that could tell us the memory is worthless.

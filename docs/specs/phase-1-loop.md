@@ -48,14 +48,29 @@ counted over **lab-owned tickets from our own DB** — never from `qkt bot posit
 which has no magic filter and would also count other strategies' positions;
 `max_daily_loss_pct`; per-instrument `max_lots`; symbol whitelist; kill-switch file.
 
-**Sizing (`lab/sizing.py`).** Arithmetic. The model never chooses lots.
+**Sizing (`lab/sizing.py`).** Composed, not chosen. Full design in `docs/SIZING.md`.
 
 ```
-risk_currency = equity × risk_per_trade_pct
-stop_distance = |entry − sl|
-lots          = risk_currency / (stop_distance × contract_value)
+lots = (equity × risk_pct) / (stop_distance × contract_value)   ← vol-targeted
+       × f(conviction)                                          ← THE MODEL'S CALL
+       × correlation_haircut(open book)
+       capped by max_lots and portfolio_heat_pct
 ```
-Floored to the venue's lot step, capped by `max_lots`.
+
+The model **does** determine size — it states a conviction, and that is a real
+input. What it does not do is pick a lot number freely, because a model that picks
+lots is a model that sizes up after losses.
+
+The catch: **`f()` is fitted from realized outcomes, never guessed.** Phase 1 ships
+`sizing.stage: flat` — conviction is *recorded on every decision* but the multiplier
+is 1.0. That's how we collect the data that tells us whether conviction means
+anything. Promotion to `fitted` requires a calibration report (mean realized R per
+conviction bucket, confidence intervals that actually separate) and is reviewed like
+any other `risk:money` change. If conviction turns out uncorrelated with outcome, it
+stays flat forever — and that's a genuinely valuable thing to have learned.
+
+Note that dividing by `stop_distance` is already volatility targeting when the stop
+is ATR-derived: risk stays constant in R terms across regimes, for free.
 
 **Execute (`lab/execute.py`).** Market orders only this phase (pending orders wait
 for a spike confirming the pending→position ticket identity). `--as` must keep the
@@ -91,7 +106,10 @@ Observable, not asserted:
 3. A proposal whose real risk-reward is below `min_rr` is rejected even when the
    model claimed a higher `expected_rr`.
 4. An executed trade's `lots` equals the sizing formula computed by hand from the
-   equity and stop distance in that decision row.
+   equity and stop distance in that decision row, with the conviction multiplier at
+   1.0 (`sizing.stage: flat`).
+4b. `conviction` is recorded on every decision, including `NO_TRADE` and `GATED`
+   rows — the calibration study in Phase 5 needs it, and it cannot be backfilled.
 5. The position closes; `bin/join` writes an `outcome` row whose `net_pnl`
    **matches the MT5 terminal to the cent**.
 6. Running `bin/join` a second time is a no-op.

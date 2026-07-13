@@ -114,6 +114,34 @@ mid-session.**
 lower bars. Same activation gate. But a bare pattern with no story is flagged as
 likelier noise, and the distiller is told so.
 
+## Conviction calibration — does the model know when it's right?
+
+The distiller owns this, because it's the same machinery: score a claim against
+realized outcomes.
+
+Bucket every closed trade by the `conviction` the model stated at decision time, and
+compute mean realized R per bucket with confidence intervals:
+
+```
+conviction 0.0-0.3   n=41   mean R  −0.06   [−0.31, +0.19]
+conviction 0.3-0.6   n=88   mean R  +0.11   [−0.04, +0.26]
+conviction 0.6-0.8   n=52   mean R  +0.38   [+0.12, +0.64]
+conviction 0.8-1.0   n=19   mean R  +0.71   [+0.22, +1.20]
+```
+
+If the relationship is monotone and the intervals actually separate, `f(conviction)`
+is fitted to it (fractional Kelly, never full) and `sizing.stage` may be promoted to
+`fitted` — at which point **the model's conviction starts driving real position
+size**. That is the agent earning its book, and it is the whole reason conviction is
+recorded from day one.
+
+If conviction turns out uncorrelated with outcome, sizing stays flat forever, and we
+have learned something no amount of prompt engineering would have surfaced: the model
+*thinks* it knows when it is right, and it doesn't.
+
+Promotion is never a config edit made on a hunch. The code refuses `fitted` without a
+supporting calibration report. See `docs/SIZING.md`.
+
 ## Scoring the memory itself
 
 Because decisions record `map_nodes_used` / `sources_read` / `beliefs_used`,

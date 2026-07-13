@@ -65,18 +65,67 @@ channels learn at very different speeds, on purpose.
 
 Details: [`docs/MEMORY.md`](docs/MEMORY.md).
 
+### Deductive chains, not a lookup table
+
+"What does Apple falling have to do with gold?" is not a fact to look up — Apple is
+four hops away, and the path runs through things that aren't.
+
+```
+AAPL -6% → equity drawdown → risk-off ─┬─► USD bid        → gold DOWN
+                                       └─► safe-haven bid → gold UP
+                                       ⚠ CONFLICT. Resolver: growth scare or
+                                         funding event? VIX +18%, no funding
+                                         stress → safe-haven leg dominates.
+                    └─► growth scare → rate-cut repricing → real yields DOWN
+                                        → gold UP  [1-3 day lag, slower leg]
+
+  ⚠ INVERTS under dollar-liquidity stress (Mar 2020, Sep 2008): gold sells off
+    with everything, because gold is what you sell when you need dollars.
+```
+
+Edges are typed, signed, lagged, and conditional — with `dominates_when` and
+`inverts_when`. When two paths from one event disagree, the graph **surfaces the
+conflict and names the resolving condition** rather than silently picking a side.
+That ambiguity is the edge; it's where everyone else is confidently wrong.
+
+Details: [`docs/CAUSAL-GRAPH.md`](docs/CAUSAL-GRAPH.md).
+
+### Sizing: the model decides, but conviction has to earn it
+
+A fund doesn't take size out of the PM's hands — it gives them a risk budget, lets
+them allocate within it, then measures whether their conviction was any good. Small
+book, prove yourself, book grows.
+
+```
+lots = (equity × risk%) / (stop × contract_value)   ← vol-targeted, for free
+       × f(conviction)                              ← THE MODEL'S CALL
+       × correlation_haircut(open book)             ← long gold + short DXY +
+                                                      long silver is ONE trade
+```
+
+**`f()` is fitted from realized outcomes, never guessed.** We start flat — conviction
+recorded, multiplier 1.0 — and promote to `fitted` only when the journal shows
+high-conviction trades genuinely outperform (monotone mean-R across buckets,
+intervals that separate). Fractional Kelly, never full.
+
+If conviction turns out uncorrelated with outcome, sizing stays flat forever, and
+we've learned something no prompt engineering would have surfaced: the model thinks
+it knows when it's right, and doesn't.
+
+Details: [`docs/SIZING.md`](docs/SIZING.md).
+
 ### Three things the model is never allowed to do
 
-Open the input side all the way — what it reads, where it searches, what it maps.
-Keep exactly three things closed:
+Open the input side all the way — what it reads, where it searches, what it maps,
+how much conviction it expresses. Keep exactly three things closed:
 
 1. **It never places an order.** It emits a proposal; deterministic code gates it
    and executes. An agent with unbounded research reach and a live trigger is not
    an analyst, it's an incident.
-2. **It never sizes the position.** Lots are arithmetic:
-   `(equity × risk%) / (|entry − sl| × contract_value)`. Letting a model pick size
-   is how you get one that sizes up after losses.
-3. **Research generates hypotheses; it does not confer edge.** The map may say gold
+2. **It never overrides the risk officer.** Daily loss limit, portfolio heat cap,
+   `max_lots`, `min_rr`, `require_sl`, kill switch. It never sees them and cannot
+   argue with them. Every fund has a risk officer, and the risk officer is not the PM.
+3. **Research generates hypotheses; it does not confer edge.** The graph may say gold
    *should* fall. A belief saying *and therefore this setup pays 0.4R* still needs
    its trades and its multiple-testing correction.
 
