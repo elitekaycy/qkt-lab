@@ -4,15 +4,12 @@ tests is a way someone gets hurt if the gate is wrong.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 from lab.gates import Book, check
 from tests.conftest import cfg_with
 
-
-NOW = datetime(2026, 7, 14, 8, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 7, 14, 8, 0, tzinfo=UTC)
 FLAT = Book(open_positions=0, open_lots=0.0, open_risk_currency=0.0, realized_today=0.0, floating=0.0)
 
 

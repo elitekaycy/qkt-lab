@@ -14,7 +14,7 @@ wanted to do and what stopped it. Throwing them away would be the mistake.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from .config import Config, Instrument
@@ -60,7 +60,7 @@ def check(
     calendar_reason: str = "",
 ) -> list[Reject]:
     """Returns every reason to refuse. Empty list means the order may be placed."""
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     out: list[Reject] = []
 
     # 1. Kill switch. `touch KILL` must stop the next cycle, full stop.
@@ -158,7 +158,7 @@ def check(
             if at is None:
                 continue
             if at.tzinfo is None:
-                at = at.replace(tzinfo=timezone.utc)
+                at = at.replace(tzinfo=UTC)
             if abs(at - now) <= window:
                 out.append(
                     Reject(

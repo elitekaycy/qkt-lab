@@ -16,7 +16,7 @@ Do NOT join via the order comment. It is `bot-<as>-<epochms>`, the wire caps it 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from .config import Config
@@ -81,7 +81,7 @@ def aggregate(ticket: int, deals: list[dict[str, Any]]) -> Joined | None:
 
     return Joined(
         ticket=ticket,
-        closed_at=datetime.fromtimestamp(close_ms / 1000, tz=timezone.utc),
+        closed_at=datetime.fromtimestamp(close_ms / 1000, tz=UTC),
         close_price=close_price,
         gross_pnl=gross,
         commission=commission,
@@ -125,7 +125,7 @@ def run(cfg: Config, qkt: Qkt, store: Store) -> dict[str, Any]:
         # 7d and has no --ticket filter, so a stale default would silently miss
         # an older trade and leave it unjoined forever.
         opened: datetime = row["ts"]
-        days = max(2, (datetime.now(timezone.utc) - opened).days + 2)
+        days = max(2, (datetime.now(UTC) - opened).days + 2)
         deals = qkt.history(since=f"{days}d")
 
         agg = aggregate(ticket, deals)

@@ -55,7 +55,7 @@ class Qkt:
                 p = subprocess.run(
                     cmd, capture_output=True, text=True, timeout=self.timeout_s
                 )
-            except subprocess.TimeoutExpired as e:
+            except subprocess.TimeoutExpired:
                 last = QktUnavailable(f"{verb} timed out after {self.timeout_s}s")
                 time.sleep(2**attempt)
                 continue
