@@ -211,19 +211,13 @@ the web.** The resolution is that the gate never calls a model. It reads a cache
 with provenance, requires two independent sources, and **fails closed**. The model
 may populate a gate; it may never *be* one.
 
-## Dependencies, honestly
+## Dependencies
 
-qkt-lab is MIT. Its two core dependencies are **public but currently unlicensed**:
+qkt-lab is MIT. Its two core dependencies:
 
 - **[qkt](https://github.com/elitekaycy/qkt)** — the trading engine and the
-  `qkt bot` CLI this drives. No LICENSE file.
-- **[mt5-gateway](https://github.com/elitekaycy/mt5-gateway)** — the MT5 bridge.
-  No LICENSE file.
-
-A public repo with no license is **"all rights reserved" by default** — readable, but
-not legally reusable. So "open source" isn't true of the stack yet, and I'd rather say
-that than let three MIT badges imply otherwise. It's a one-file fix on each, tracked in
-[#8](https://github.com/elitekaycy/qkt-lab/issues/8).
+  `qkt bot` CLI this drives. Apache-2.0.
+- **[mt5-gateway](https://github.com/elitekaycy/mt5-gateway)** — the MT5 bridge. MIT.
 
 **Deltalytix** (the journal UI) is **CC BY-NC 4.0** — not an OSI license. It's a
 plugin behind `journal.deltalytix.enabled`, and the loop runs fully without it.
