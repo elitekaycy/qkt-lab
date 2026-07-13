@@ -15,7 +15,7 @@ change, not a rewrite of the reasoning.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -60,7 +60,7 @@ class Chain:
     def slowest_lag(self) -> str:
         # The chain is only as fast as its slowest hop.
         order = {"same-day": 0, "1-3 days": 1, "days": 1, "weeks": 2, "months": 3}
-        return max((e.lag for e in self.hops), key=lambda l: order.get(l, 1))
+        return max((e.lag for e in self.hops), key=lambda lag: order.get(lag, 1))
 
     @property
     def conditions(self) -> list[str]:
