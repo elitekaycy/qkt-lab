@@ -119,9 +119,11 @@ services:
       LOCAL_DASHBOARD_USER_EMAIL: local-dashboard@deltalytix.local
       NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL: local-dashboard@deltalytix.local
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      OPENAI_API_KEY: dummy
-      NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
-      STRIPE_SECRET_KEY: sk_test_dummy
+      # Deltalytix requires these to be set; none is used with the auth bypass.
+      # Deliberately NOT shaped like real credentials, so secret scanners stay quiet.
+      OPENAI_API_KEY: unused
+      NEXT_PUBLIC_SUPABASE_URL: https://unused.supabase.co
+      STRIPE_SECRET_KEY: unused
 
 volumes:
   lab-pg:
