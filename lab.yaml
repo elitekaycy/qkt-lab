@@ -35,7 +35,13 @@ instruments:
     schedule: "0 * * * *"             # hourly, on the 1h bar close
     timeframes: [1h, 15m]             # charts + bars handed to the model
     bars: 200                         # per timeframe
-    max_lots: 0.10                    # hard per-instrument cap
+    max_lots: 0.30                    # hard per-instrument cap. MUST sit ABOVE the size
+                                      # the risk model normally produces, or it binds on
+                                      # every trade and silently becomes the only sizing
+                                      # rule — the risk model goes inert and you don't
+                                      # notice. At 0.5% risk on a ~$4 gold stop with 10k
+                                      # equity, typical size is ~0.13 lots. This cap is
+                                      # for outliers (a very tight stop), not normal days.
 
 # ---------------------------------------------------------------------------
 # The agent. Three separate sessions, three separate prompts, three separate
