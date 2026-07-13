@@ -45,6 +45,24 @@ researcher cannot place an order.
 
 Full walkthrough with a worked week: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
+### It writes its own tooling — carefully
+
+The agent discovers how to reach data, records the working recipe, and never
+re-derives it. Reach compounds; the trade loop gets *cheaper* as the agent learns.
+
+The trap: **storing an LLM-written shell command and executing it later is remote
+code execution.** This agent reads the open web for a living, and a web page can
+carry text crafted to be read as an instruction. So procedures are **declarative
+fetch specs** — url, params, parser, and a **mandatory validator** — run by an HTTP
+client, never `bash -c` on a model-authored string.
+
+Every procedure is validated on every fetch (shape, freshness, plausible range),
+because a stored fetch that silently starts returning garbage is worse than one that
+fails. When one dies, that fires an anomaly and RESEARCH goes and finds a new route
+in. That's the system healing itself, and it only works because the failure is loud.
+
+Details, including what could still go wrong: [`docs/SELF-ADVANCING.md`](docs/SELF-ADVANCING.md).
+
 ### Memory is four kinds, not one
 
 Different knowledge earns trust differently. Forcing a t-statistic onto "here is
@@ -157,18 +175,42 @@ about.
 
 ---
 
+## No API keys
+
+The only credential in the system is your **Claude subscription** (`claude -p`) and
+the broker login that already lives in the MT5 gateway. No FRED key, no Finnhub, no
+paid calendar, no X plan.
+
+All market and macro data comes from keyless public endpoints, executed from
+declarative fetch specs **the agent writes itself**:
+
+```
+FRED    fredgraph.csv?id=DFII10,DTWEXBGS     real yields, dollar, curve    keyless
+Yahoo   /v8/finance/chart/AAPL               any ticker, cross-asset OHLC  keyless
+```
+
+If you find yourself adding a key, the loop has stopped being reproducible by
+someone who just cloned the repo. That's the constraint, and it's deliberate.
+
+See [`docs/RUNTIME.md`](docs/RUNTIME.md) for how that works — and §4 for the one
+place it gets genuinely hard: **a safety gate whose data comes from an LLM reading
+the web.** The resolution is that the gate never calls a model. It reads a cache file
+with provenance, requires two independent sources, and **fails closed**. The model
+may populate a gate; it may never *be* one.
+
 ## Dependencies, honestly
 
-qkt-lab is MIT and the orchestration is reusable. But two of its dependencies are
-not public today:
+qkt-lab is MIT. Its two core dependencies are **public but currently unlicensed**:
 
 - **[qkt](https://github.com/elitekaycy/qkt)** — the trading engine and the
-  `qkt bot` CLI this drives. Private.
-- **mt5-gateway** — the MT5 bridge. Has no LICENSE file at all.
+  `qkt bot` CLI this drives. No LICENSE file.
+- **[mt5-gateway](https://github.com/elitekaycy/mt5-gateway)** — the MT5 bridge.
+  No LICENSE file.
 
-So you can read the design and lift the patterns, but you cannot yet run the loop
-without those. Resolving that is tracked as an issue. I'd rather say this plainly
-than let the MIT badge imply something untrue.
+A public repo with no license is **"all rights reserved" by default** — readable, but
+not legally reusable. So "open source" isn't true of the stack yet, and I'd rather say
+that than let three MIT badges imply otherwise. It's a one-file fix on each, tracked in
+[#8](https://github.com/elitekaycy/qkt-lab/issues/8).
 
 **Deltalytix** (the journal UI) is **CC BY-NC 4.0** — not an OSI license. It's a
 plugin behind `journal.deltalytix.enabled`, and the loop runs fully without it.
