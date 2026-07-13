@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Emit a crontab from lab.yaml so the schedule has ONE source of truth.
+
+The compose scheduler runs `bin/gen-crontab > /tmp/crontab && supercronic
+/tmp/crontab` — editing a schedule in lab.yaml and restarting the container is
+the whole deployment story. Nothing here is hand-maintained.
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from lab import config as cfgmod
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def main() -> int:
+    cfg = cfgmod.load(ROOT / "lab.yaml")
+    raw = cfg.raw
+    lines = [
+        "# GENERATED from lab.yaml by bin/gen-crontab — do not edit.",
+        "SHELL=/bin/bash",
+    ]
+
+    for inst in cfg.instruments:
+        lines.append(f"{inst.schedule} python3 /lab/bin/trade {inst.symbol}")
+
+    join = raw["store"]["join_interval"]
+    # export follows join so Deltalytix sees a closed trade within one interval.
+    lines.append(f"{join} python3 /lab/bin/join && python3 /lab/bin/export")
+
+    lines.append(f"{raw['agent']['distiller']['schedule']} python3 /lab/bin/distill")
+    lines.append(f"{raw['agent']['researcher']['schedule']} python3 /lab/bin/research")
+
+    print("\n".join(lines))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

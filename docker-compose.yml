@@ -1,0 +1,131 @@
+# qkt-lab — the whole loop from one command.
+#
+#   docker compose up -d                     # the loop (gateway, db, scheduler, charts)
+#   docker compose --profile journal up -d   # + the Deltalytix UI
+#   touch KILL                               # emergency stop (bind-mounted; gate stats it)
+#
+# Bind-mount rule: anything a human reads or writes (memory/, KILL, lab.yaml,
+# prompts/, state/charts) is a bind mount; anything only a machine touches
+# (postgres data) is a named volume. memory/ MUST be a bind mount — it is
+# git-tracked, and the agent's commits must land in the host working tree.
+
+services:
+  mt5-gateway:
+    image: elitekaycy/mt5-gateway-api:0.3.2
+    container_name: lab-mt5-gateway
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5001:5001"
+    volumes:
+      - gateway-config:/config
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: lab-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: ${LAB_DB_PASSWORD:-lab}
+      POSTGRES_DB: lab
+    volumes:
+      - lab-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab"]
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    image: qkt-lab:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./:/lab
+    environment: &lab-env
+      LAB_DATABASE_URL: postgresql://lab:${LAB_DB_PASSWORD:-lab}@postgres:5432/lab
+      DELTALYTIX_DATABASE_URL: postgresql://deltalytix:${DELTALYTIX_DB_PASSWORD:-deltalytix}@deltalytix-db:5432/deltalytix
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN}
+    command: >
+      python3 -c "from lab.store import Store; from pathlib import Path;
+      Store('postgresql://lab:${LAB_DB_PASSWORD:-lab}@postgres:5432/lab').migrate(Path('db/schema.sql'));
+      print('schema applied')"
+    restart: "no"
+
+  scheduler:
+    image: qkt-lab:local
+    container_name: lab-scheduler
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./:/lab
+    environment: *lab-env
+    # The crontab is GENERATED from lab.yaml so there is one source of truth
+    # for when things run. supercronic logs to stdout: `docker compose logs scheduler`.
+    # supercronic must be an ABSOLUTE path: as pid 1 it re-execs argv[0], and a
+    # bare name found via PATH fails that re-exec with "no such file or directory".
+    command: >
+      bash -c "python3 bin/gen-crontab > /tmp/crontab
+      && exec /usr/local/bin/supercronic /tmp/crontab"
+
+  charts:
+    image: caddy:2-alpine
+    container_name: lab-charts
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./state/charts:/srv/charts:ro
+    command: caddy file-server --root /srv --listen :8080
+
+  # --- profile: journal (optional; the loop runs fully without it) -------------
+
+  deltalytix-db:
+    profiles: [journal]
+    image: postgres:16-alpine
+    container_name: lab-deltalytix-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: deltalytix
+      POSTGRES_PASSWORD: ${DELTALYTIX_DB_PASSWORD:-deltalytix}
+      POSTGRES_DB: deltalytix
+    volumes:
+      - deltalytix-pg:/var/lib/postgresql/data
+
+  # Deltalytix itself: build from github.com/hugodemenez/deltalytix per its
+  # SELF_HOSTING.md (CC BY-NC — private personal use). Auth bypass, production
+  # build, and the Subscription row are handled by bin/export + these env vars.
+  # Bind to localhost or a tailscale interface ONLY — the bypass means NO LOGIN.
+  deltalytix:
+    profiles: [journal]
+    image: ${DELTALYTIX_IMAGE:-deltalytix:local}
+    container_name: lab-deltalytix
+    restart: unless-stopped
+    depends_on: [deltalytix-db]
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgresql://deltalytix:${DELTALYTIX_DB_PASSWORD:-deltalytix}@deltalytix-db:5432/deltalytix
+      DIRECT_URL: postgresql://deltalytix:${DELTALYTIX_DB_PASSWORD:-deltalytix}@deltalytix-db:5432/deltalytix
+      LOCAL_DASHBOARD_AUTH_BYPASS: "true"
+      LOCAL_DASHBOARD_AUTH_BYPASS_ALLOW_PRODUCTION: "1"
+      NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS: "true"
+      LOCAL_DASHBOARD_USER_ID: local-dashboard-user
+      NEXT_PUBLIC_LOCAL_DASHBOARD_USER_ID: local-dashboard-user
+      LOCAL_DASHBOARD_USER_EMAIL: local-dashboard@deltalytix.local
+      NEXT_PUBLIC_LOCAL_DASHBOARD_USER_EMAIL: local-dashboard@deltalytix.local
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      # Deltalytix requires these to be set; none is used with the auth bypass.
+      # Deliberately NOT shaped like real credentials, so secret scanners stay quiet.
+      OPENAI_API_KEY: unused
+      NEXT_PUBLIC_SUPABASE_URL: https://unused.supabase.co
+      STRIPE_SECRET_KEY: unused
+
+volumes:
+  lab-pg:
+  deltalytix-pg:
+  gateway-config:
