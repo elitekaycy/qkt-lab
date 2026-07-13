@@ -1,9 +1,8 @@
 # The lab image: qkt CLI (JVM) + claude CLI (node) + python orchestration.
 #
-# QKT_IMAGE must carry the `qkt bot` command group. Until qkt's dev branch is
-# merged and published (qkt-lab#21), build it locally from qkt's repo:
-#   docker build --target runtime -t qkt:bot /path/to/qkt
-ARG QKT_IMAGE=qkt:bot
+# QKT_IMAGE must carry the `qkt bot` command group; the published image does.
+# Override to pin a version, or to a local build when developing against qkt.
+ARG QKT_IMAGE=ghcr.io/elitekaycy/qkt:latest
 FROM ${QKT_IMAGE} AS qkt
 
 FROM debian:12-slim
