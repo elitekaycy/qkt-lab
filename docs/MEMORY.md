@@ -85,9 +85,22 @@ This is where "which websites proved useful for particular trades" lives, and it
 also where a source *loses* trust. The Reddit/X question from before answers
 itself here: it becomes a source card with a track record, not a permanent fixture.
 
-## 3. Causal map — `memory/map/`
+## 3. Causal graph — `memory/map/`
 
-The analyst's worldview. One file per driver, linked to the others.
+The analyst's worldview, and the thing we are really trying to model. **Full design
+in [`CAUSAL-GRAPH.md`](CAUSAL-GRAPH.md)** — read that; this section is the summary.
+
+Nodes are **entities** (assets, event classes, macro states, flows), not "drivers of
+gold". Gold is just one node; it happens to be the one we trade. Edges are typed,
+signed, lagged, and **conditional** — carrying `dominates_when` and `inverts_when`,
+so the graph can represent the case where two paths from one event point in opposite
+directions and the skill is knowing which dominates.
+
+Traversal walks from an observed event to the instrument and returns *chains*, with
+the mechanism named at each hop. That's what lets it answer "what does Apple falling
+have to do with gold" — a question a per-driver lookup table cannot even parse.
+
+The example below is a single node from that graph, to show the shape:
 
 ```markdown
 ---

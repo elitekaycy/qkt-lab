@@ -49,16 +49,49 @@ calls that were or weren't borne out. A desk that is right about *mechanism* and
 early by weeks scores differently from one that is right about *timing* — both are
 useful, differently, and the card says which.
 
-**Causal map (`memory/map/`).** One file per driver, cross-linked with `[[wikilinks]]`.
-Each node carries:
+**Causal graph (`memory/map/`).** Full design in `docs/CAUSAL-GRAPH.md`. This is not
+a lookup table of "drivers of gold" — that cannot answer *what does Apple have to do
+with gold*, because Apple is not a driver of gold. It is four hops away, and the path
+runs through things that are.
 
-- `channel` — the transmission mechanism, in plain language
-- `strength` — `strong | moderate | weak | contested`
-- `direction`, typical lag
-- **`where it breaks`** — the counter-reactions. This section is the point. Knowing
-  that real yields *stopped mattering* in 2023 because central-bank buying went
-  price-insensitive is worth more than knowing they usually matter.
-- `evidence` — a computed statistic over market data, with a chart, and a date
+**Nodes are entities**, not drivers: an asset (`AAPL`, `DXY`, `US10Y-REAL`), an event
+class (`fomc-speech`, `cpi-print`), a macro state (`risk-off`,
+`dollar-funding-stress`), a flow (`etf-flows`, `cb-demand`). Gold is just one node.
+It happens to be the one we trade.
+
+**Edges are typed, signed, lagged, and conditional:**
+
+```yaml
+edge: risk-off -> XAUUSD
+  sign: +      strength: moderate      lag: same-day
+  channel: safe-haven bid — capital rotates into gold when equity risk reprices
+  dominates_when: vix_spike AND NOT dollar_funding_stress
+  inverts_when:   dollar_funding_stress
+  evidence: n=47 risk-off episodes since 2006; gold +0.8% median,
+            BUT -4.2% in the 5 funding-stress episodes.  computed 2026-07-13
+```
+
+`inverts_when` is the field that makes this worth building. In March 2020 and
+September 2008 gold *sold off* with everything — gold is what you sell when you need
+dollars. A map that only knew "risk-off → gold up" would have had you long into the
+worst two days of the decade.
+
+**Traversal (`lab/graph.py`)** walks from an observed event to the instrument and
+returns ranked *chains*, with the mechanism named at each hop — and when two paths
+from one event disagree, it **surfaces the conflict and names the resolving
+condition** rather than silently picking a side. That ambiguity is the edge; it is
+exactly where everyone else is confidently wrong.
+
+Lags are explicit: the risk-off leg fires today, the rate-repricing leg takes days.
+An event can be bearish gold at 09:30 and bullish gold by Thursday, and the graph
+says so. Most systems collapse that into one signal and get chopped up.
+
+**Storage:** markdown with `[[wikilinks]]` and YAML edge blocks. That *is* a graph —
+it traverses fine at hundreds of nodes, it's diffable, and its history is in git.
+Traversal sits behind an interface so swapping to Neo4j/Graphiti later is a storage
+change, not a rewrite of the reasoning. We switch when file traversal is a *measured*
+bottleneck — thousands of nodes, not hundreds. A graph database is not a substitute
+for having thought about the edges.
 
 **Retrieval (`lab/retrieve.py`).** Context-conditioned, not "load everything".
 CPI in four hours ⇒ pull `real-rates`, `inflation-surprise`, `dxy`. Don't pull
@@ -83,14 +116,20 @@ Belief scoring, the distiller, the research loop. Phase 5.
 
 ## Acceptance
 
-1. A map node exists for XAUUSD's principal drivers, each with a `where it breaks`
-   section and an evidence statistic computed from real market data.
-2. Retrieval is demonstrably context-conditioned: with CPI in the window, the
-   packet contains `inflation-surprise` and does **not** contain `mine-supply`.
-3. The packet stays under `context_budget_tokens` with 50+ map nodes on disk.
-4. A decision row records which map nodes, sources, and procedures it used.
-5. A procedure written by hand is picked up and used by the next cycle without a
-   code change.
+1. Given "AAPL -6% pre-market", traversal returns the multi-hop chains to XAUUSD —
+   including the risk-off/safe-haven **conflict** and the dollar-funding-stress
+   **inversion**. Not a list of facts. A chain, with the mechanism named at each hop.
+2. Every edge carries an evidence statistic computed from **market data** (an episode
+   study), with a date. No trades required to earn it.
+3. Conflicting paths are surfaced to the model *as a conflict*, with the resolving
+   condition — never silently resolved.
+4. Retrieval is demonstrably context-conditioned: with CPI in the window, the packet
+   contains `inflation-surprise` and does **not** contain `mine-supply`.
+5. The packet stays under `context_budget_tokens` with 200+ nodes on disk.
+6. A decision row records which map nodes, sources, and procedures it used.
+7. A source card or procedure written by hand is picked up by the next cycle **with
+   no code change**.
+8. Swapping the storage backend would not require rewriting traversal.
 
 ## Refs
 

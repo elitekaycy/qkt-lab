@@ -12,6 +12,24 @@ It also introduces the first gate that depends on an external source — the new
 blackout — which is the point at which "the source was down" stops being a
 curiosity and starts being a safety question.
 
+## Sources are seeds, not a whitelist
+
+`lab.yaml` holds **credentials and budgets, not the universe.** It seeds the agent
+with a few starting points. Everything after that, the agent grows itself:
+
+- **`memory/sources/`** — a living registry **written by RESEARCH**. It discovers a
+  source, uses it, records what it was good for and whether its information was
+  borne out. Sources accumulate; bad ones decay out via the usefulness score.
+- **`memory/procedures/`** — the working recipe for each: the curl that returns
+  valid JSON, the scrape that survives, the API quirk, the release-time gotcha.
+  Once something is reached successfully, it is never re-derived.
+
+**Harvest reads the registry, not a hardcoded list.** This is the part that
+compounds — the agent's *reach* expands over time, not just its opinions.
+
+Guardrails, non-negotiable: robots.txt respected, rate limits honoured, no
+credentialed scraping of sites that forbid it.
+
 ## What we build
 
 **Charts (`lab/charts.py`).** `qkt bot bars --json` (fields are `t` epoch-ms,
@@ -73,6 +91,9 @@ Memory, beliefs, research, the causal map, Deltalytix.
    recording it.
 5. Swapping in an inverted chart demonstrably changes the proposal (the images are
    actually being read, not decoratively attached).
+6. A source card and procedure written by hand into `memory/` is picked up by the
+   next harvest cycle **with no code change** — proving the registry, not the config,
+   is what drives harvesting.
 
 ## Refs
 
