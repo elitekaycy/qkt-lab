@@ -66,9 +66,7 @@ def conviction_multiplier(cfg: Config, conviction: float) -> float:
     return max(0.0, min(damped, cfg.sizing.conviction_max_mult))
 
 
-def correlation_haircut(
-    cfg: Config, open_risk_currency: float, equity: float
-) -> float:
+def correlation_haircut(cfg: Config, open_risk_currency: float, equity: float) -> float:
     """Shrink size as the book's total open risk approaches the heat cap.
 
     Long gold + short DXY + long silver is one trade wearing three hats. Sizing

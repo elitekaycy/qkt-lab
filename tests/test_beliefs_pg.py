@@ -26,8 +26,14 @@ pytestmark = pytest.mark.skipif(not DSN, reason="LAB_TEST_DSN not set")
 ROOT = Path(__file__).resolve().parents[1]
 
 SESSIONS = ["asia", "london", "ny"]
-FACTORS = ["level:vwap-touch", "level:pdh", "trend:1h-up", "trend:1h-down",
-           "vol:atr-high", "vol:atr-normal"]
+FACTORS = [
+    "level:vwap-touch",
+    "level:pdh",
+    "trend:1h-up",
+    "trend:1h-down",
+    "vol:atr-high",
+    "vol:atr-normal",
+]
 
 
 @pytest.fixture
@@ -45,23 +51,39 @@ def seed_random_trades(store: Store, n: int, rng: random.Random) -> None:
     t0 = datetime(2026, 5, 1, tzinfo=UTC)
     for i in range(n):
         ticket = 10_000 + i
-        store.record(Decision(
-            as_name="lab-xau", symbol="ICM:XAUUSD", action="TRADE",
-            side=rng.choice(["BUY", "SELL"]),
-            lots=0.13, sl=2600.0, tp=2620.0, conviction=rng.random(),
-            setup=rng.choice(["vwap-pullback", "range-fade", "print-follow"]),
-            factors=rng.sample(FACTORS, k=2),
-            regime={"session": rng.choice(SESSIONS),
-                    "atr14": round(rng.uniform(2.0, 6.0), 2)},
-            ticket=ticket, fill_price=2610.0, accepted=True,
-            risk_at_entry=50.0, equity_at_entry=10000.0,
-        ))
+        store.record(
+            Decision(
+                as_name="lab-xau",
+                symbol="ICM:XAUUSD",
+                action="TRADE",
+                side=rng.choice(["BUY", "SELL"]),
+                lots=0.13,
+                sl=2600.0,
+                tp=2620.0,
+                conviction=rng.random(),
+                setup=rng.choice(["vwap-pullback", "range-fade", "print-follow"]),
+                factors=rng.sample(FACTORS, k=2),
+                regime={"session": rng.choice(SESSIONS), "atr14": round(rng.uniform(2.0, 6.0), 2)},
+                ticket=ticket,
+                fill_price=2610.0,
+                accepted=True,
+                risk_at_entry=50.0,
+                equity_at_entry=10000.0,
+            )
+        )
         r = rng.gauss(0.0, 1.0)  # NO edge, by construction
         store.record_outcome(
-            ticket=ticket, closed_at=t0 + timedelta(hours=i * 6),
-            close_price=2610.0 + r, gross_pnl=r * 50.0, commission=-0.9, swap=0.0,
-            net_pnl=r * 50.0, r_multiple=r, lots_closed=0.13,
-            duration_s=3600, deals=[],
+            ticket=ticket,
+            closed_at=t0 + timedelta(hours=i * 6),
+            close_price=2610.0 + r,
+            gross_pnl=r * 50.0,
+            commission=-0.9,
+            swap=0.0,
+            net_pnl=r * 50.0,
+            r_multiple=r,
+            lots_closed=0.13,
+            duration_s=3600,
+            deals=[],
         )
 
 
@@ -95,9 +117,7 @@ def test_forty_noise_beliefs_zero_activations(store, cfg, tmp_path):
 
     assert len(statuses) == 40
     activated = [b for b, s in statuses.items() if s == "ACTIVE"]
-    assert activated == [], (
-        f"noise activated: {activated} — the false-discovery gate has failed"
-    )
+    assert activated == [], f"noise activated: {activated} — the false-discovery gate has failed"
     # And the files carry code-written evidence the model never touches.
     sample = (beliefs_dir / "noise-00.md").read_text()
     assert "supporting:" in sample and "refuting:" in sample
@@ -113,19 +133,37 @@ def test_a_real_edge_planted_in_the_noise_is_found(store, cfg, tmp_path):
     t0 = datetime(2026, 6, 20, tzinfo=UTC)
     for i in range(45):
         ticket = 90_000 + i
-        store.record(Decision(
-            as_name="lab-xau", symbol="ICM:XAUUSD", action="TRADE", side="BUY",
-            lots=0.13, sl=2600.0, conviction=0.6, setup="vwap-pullback",
-            factors=["level:vwap-touch", "trend:1h-up"],
-            regime={"session": "london", "atr14": 4.0},
-            ticket=ticket, fill_price=2610.0, accepted=True,
-            risk_at_entry=50.0, equity_at_entry=10000.0,
-        ))
+        store.record(
+            Decision(
+                as_name="lab-xau",
+                symbol="ICM:XAUUSD",
+                action="TRADE",
+                side="BUY",
+                lots=0.13,
+                sl=2600.0,
+                conviction=0.6,
+                setup="vwap-pullback",
+                factors=["level:vwap-touch", "trend:1h-up"],
+                regime={"session": "london", "atr14": 4.0},
+                ticket=ticket,
+                fill_price=2610.0,
+                accepted=True,
+                risk_at_entry=50.0,
+                equity_at_entry=10000.0,
+            )
+        )
         r = rng.gauss(0.8, 1.0)  # real positive edge
         store.record_outcome(
-            ticket=ticket, closed_at=t0 + timedelta(hours=i * 3),
-            close_price=2612.0, gross_pnl=r * 50, commission=-0.9, swap=0.0,
-            net_pnl=r * 50, r_multiple=r, lots_closed=0.13, duration_s=3600,
+            ticket=ticket,
+            closed_at=t0 + timedelta(hours=i * 3),
+            close_price=2612.0,
+            gross_pnl=r * 50,
+            commission=-0.9,
+            swap=0.0,
+            net_pnl=r * 50,
+            r_multiple=r,
+            lots_closed=0.13,
+            duration_s=3600,
             deals=[],
         )
 

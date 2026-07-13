@@ -31,9 +31,20 @@ import psycopg
 NAMESPACE = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 
 SIGNATURE_FIELDS = [
-    "userId", "accountNumber", "instrument", "entryDate", "closeDate",
-    "entryPrice", "closePrice", "quantity", "entryId", "closeId",
-    "timeInPosition", "side", "pnl", "commission",
+    "userId",
+    "accountNumber",
+    "instrument",
+    "entryDate",
+    "closeDate",
+    "entryPrice",
+    "closePrice",
+    "quantity",
+    "entryId",
+    "closeId",
+    "timeInPosition",
+    "side",
+    "pnl",
+    "commission",
 ]
 
 

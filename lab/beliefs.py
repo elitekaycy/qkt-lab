@@ -105,8 +105,17 @@ def score(store: Store, belief_id: str, clauses: list[str]) -> Scored:
     refuting = [int(r["ticket"]) for r in rows if float(r["r_multiple"]) <= 0]
 
     if n < 2:
-        return Scored(belief_id, n, len(supporting), len(refuting),
-                      sum(rs) / n if n else 0.0, 0.0, 1.0, supporting, refuting)
+        return Scored(
+            belief_id,
+            n,
+            len(supporting),
+            len(refuting),
+            sum(rs) / n if n else 0.0,
+            0.0,
+            1.0,
+            supporting,
+            refuting,
+        )
 
     mean = sum(rs) / n
     var = sum((x - mean) ** 2 for x in rs) / (n - 1)
@@ -115,8 +124,7 @@ def score(store: Store, belief_id: str, clauses: list[str]) -> Scored:
     # One-sided p against mean_R <= 0, normal approximation. With the BH pass on
     # top and n>=30 to activate, the approximation error is not the binding risk.
     p = 1.0 - _phi(t)
-    return Scored(belief_id, n, len(supporting), len(refuting), mean, t, p,
-                  supporting, refuting)
+    return Scored(belief_id, n, len(supporting), len(refuting), mean, t, p, supporting, refuting)
 
 
 def _phi(x: float) -> float:
@@ -144,6 +152,7 @@ def benjamini_hochberg(p_values: dict[str, float], alpha: float) -> set[str]:
 
 # --- status transitions: arithmetic, never judgment -----------------------------
 
+
 def next_status(current: str, s: Scored, cfg: Config, survives_family: bool) -> str:
     """CANDIDATE -> ACTIVE -> WEAKENING -> INVALIDATED. Decrement, never delete."""
     cur = current.upper()
@@ -170,6 +179,7 @@ def next_status(current: str, s: Scored, cfg: Config, survives_family: bool) -> 
 
 
 # --- the belief file on disk ----------------------------------------------------
+
 
 def _frontmatter(path: Path) -> tuple[dict[str, Any], str]:
     text = path.read_text()

@@ -145,10 +145,15 @@ def run(
         user = f"{refs}\n\n{user}"
 
     cmd = [
-        "claude", "-p", user,
-        "--append-system-prompt", sys_text,
-        "--model", model,
-        "--output-format", "text",
+        "claude",
+        "-p",
+        user,
+        "--append-system-prompt",
+        sys_text,
+        "--model",
+        model,
+        "--output-format",
+        "text",
     ]
     if allowed_tools:
         cmd += ["--allowed-tools", allowed_tools]
@@ -156,9 +161,7 @@ def run(
         cmd += ["--allowed-tools", ""]
 
     try:
-        p = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout_s, cwd=cwd
-        )
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s, cwd=cwd)
     except subprocess.TimeoutExpired:
         raise AgentError(f"claude -p timed out after {timeout_s}s") from None
 

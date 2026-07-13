@@ -20,8 +20,9 @@ def graph():
 
 def test_shipped_map_loads():
     g = graph()
-    assert {"real-yields", "dxy", "risk-off", "equity-drawdown",
-            "central-bank-demand"} <= set(g.nodes)
+    assert {"real-yields", "dxy", "risk-off", "equity-drawdown", "central-bank-demand"} <= set(
+        g.nodes
+    )
 
 
 def test_aapl_scenario_multi_hop():
@@ -46,10 +47,7 @@ def test_conflict_is_surfaced_not_resolved():
 
 def test_net_sign_composes_along_the_chain():
     t = graph().traverse("equity-drawdown", "XAUUSD")
-    by_path = {
-        " -> ".join([c.hops[0].src] + [e.dst for e in c.hops]): c.net_sign
-        for c in t.chains
-    }
+    by_path = {" -> ".join([c.hops[0].src] + [e.dst for e in c.hops]): c.net_sign for c in t.chains}
     # risk-off -> safe-haven bid: (+)(+) = +
     assert by_path["equity-drawdown -> risk-off -> XAUUSD"] == 1
     # risk-off -> usd-bid -> gold: (+)(+)(-) = -
@@ -58,8 +56,7 @@ def test_net_sign_composes_along_the_chain():
 
 def test_lag_is_the_slowest_hop():
     t = graph().traverse("equity-drawdown", "XAUUSD")
-    slow = next(c for c in t.chains
-                if any(e.dst == "rate-cut-repricing" for e in c.hops))
+    slow = next(c for c in t.chains if any(e.dst == "rate-cut-repricing" for e in c.hops))
     assert slow.slowest_lag == "1-3 days"
 
 
@@ -77,6 +74,8 @@ def test_unknown_path_is_a_research_candidate_not_an_error():
 
 def test_cycles_do_not_hang(tmp_path):
     (tmp_path / "a.md").write_text("---\nid: a\nedges: [{to: b, sign: '+'}]\n---\n")
-    (tmp_path / "b.md").write_text("---\nid: b\nedges: [{to: a, sign: '+'}, {to: X, sign: '+'}]\n---\n")
+    (tmp_path / "b.md").write_text(
+        "---\nid: b\nedges: [{to: a, sign: '+'}, {to: X, sign: '+'}]\n---\n"
+    )
     t = Graph.load(tmp_path).traverse("a", "X")
     assert len(t.chains) == 1

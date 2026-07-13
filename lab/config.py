@@ -280,9 +280,7 @@ def _validate(cfg: Config) -> None:
             raise ConfigError(f"{inst.symbol}: max_lots must be > 0")
 
     if not cfg.gates.require_sl:
-        raise ConfigError(
-            "gates.require_sl=false. Every trade must carry a stop. Not negotiable."
-        )
+        raise ConfigError("gates.require_sl=false. Every trade must carry a stop. Not negotiable.")
     if not cfg.calendar.fail_closed:
         raise ConfigError(
             "calendar.fail_closed=false. A stale calendar would let the loop trade "

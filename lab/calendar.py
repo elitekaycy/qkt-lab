@@ -57,7 +57,7 @@ def load(cfg: Config, now: datetime | None = None) -> CalendarRead:
     if age > timedelta(hours=cfg.calendar.max_age_hours):
         return CalendarRead(
             False,
-            f"calendar cache is {age.total_seconds()/3600:.1f}h old "
+            f"calendar cache is {age.total_seconds() / 3600:.1f}h old "
             f"(max {cfg.calendar.max_age_hours}h) — refusing to trade blind",
             [],
         )
@@ -80,7 +80,10 @@ def load(cfg: Config, now: datetime | None = None) -> CalendarRead:
 
 
 def upcoming(
-    events: list[dict[str, Any]], symbol: str, bare: str, within: timedelta,
+    events: list[dict[str, Any]],
+    symbol: str,
+    bare: str,
+    within: timedelta,
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
     """High-impact events for this instrument inside the window."""

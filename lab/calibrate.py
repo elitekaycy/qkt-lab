@@ -62,8 +62,7 @@ def run(store: Store) -> Calibration:
     )
     buckets: list[Bucket] = []
     for lo, hi in BUCKETS:
-        rs = [float(r["r_multiple"]) for r in rows
-              if lo <= float(r["conviction"]) < hi]
+        rs = [float(r["r_multiple"]) for r in rows if lo <= float(r["conviction"]) < hi]
         n = len(rs)
         if n < 2:
             buckets.append(Bucket(lo, min(hi, 1.0), n, 0.0, 0.0, 0.0))
@@ -74,14 +73,11 @@ def run(store: Store) -> Calibration:
         buckets.append(Bucket(lo, min(hi, 1.0), n, mean, mean - half, mean + half))
 
     populated = [b for b in buckets if b.n >= 20]
-    monotone = (
-        len(populated) >= 3
-        and all(a.mean_r < b.mean_r for a, b in zip(populated, populated[1:], strict=False))
+    monotone = len(populated) >= 3 and all(
+        a.mean_r < b.mean_r for a, b in zip(populated, populated[1:], strict=False)
     )
     # "Separated" = the top populated bucket's CI floor clears the bottom's ceiling.
-    separated = (
-        len(populated) >= 2 and populated[-1].ci_low > populated[0].ci_high
-    )
+    separated = len(populated) >= 2 and populated[-1].ci_low > populated[0].ci_high
 
     fit = None
     if monotone and separated:
@@ -93,7 +89,9 @@ def run(store: Store) -> Calibration:
         denom = sum((x - mx) ** 2 for x in xs)
         slope = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True)) / denom
         # Normalize into multiplier space: neutral at the mean bucket.
-        fit = {"slope": round(slope / max(abs(my), 0.1), 3), "intercept": 1.0 - round(
-            slope / max(abs(my), 0.1), 3) * mx}
+        fit = {
+            "slope": round(slope / max(abs(my), 0.1), 3),
+            "intercept": 1.0 - round(slope / max(abs(my), 0.1), 3) * mx,
+        }
 
     return Calibration(buckets, monotone, separated, fit)

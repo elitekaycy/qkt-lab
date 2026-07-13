@@ -61,7 +61,10 @@ def apply_ops(cfg: Config, ops: list[dict[str, Any]]) -> dict[str, str]:
 
         if kind == "NOTE":
             if path.exists():
-                path.write_text(path.read_text() + f"\nnote ({datetime.now(UTC).date()}): {op.get('note', '')}\n")
+                path.write_text(
+                    path.read_text()
+                    + f"\nnote ({datetime.now(UTC).date()}): {op.get('note', '')}\n"
+                )
                 results[bid] = "noted"
             else:
                 results[bid] = "skipped: NOTE on unknown belief"
@@ -108,7 +111,9 @@ def run(cfg: Config, store: Store) -> dict[str, Any]:
         }
         try:
             raw, _ = agent_mod.run(
-                cfg.root / "prompts" / "distiller.md", packet, model=cfg.model,
+                cfg.root / "prompts" / "distiller.md",
+                packet,
+                model=cfg.model,
                 timeout_s=600,
             )
             ops = raw if isinstance(raw, list) else raw.get("ops", [])
@@ -148,7 +153,9 @@ def anomaly_tickets(store: Store, cfg: Config) -> list[str]:
         "SELECT ticket, r_multiple FROM episode "
         "WHERE closed_at > now() - interval '2 days' AND abs(r_multiple) > 2.5"
     ):
-        out.append(f"ticket {r['ticket']}: |R|={float(r['r_multiple']):+.2f} outlier — verify the thesis held")
+        out.append(
+            f"ticket {r['ticket']}: |R|={float(r['r_multiple']):+.2f} outlier — verify the thesis held"
+        )
     return out
 
 

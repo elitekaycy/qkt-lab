@@ -72,9 +72,7 @@ def run(cfg: Config, qkt: Qkt, store: Store, inst: Instrument) -> CycleResult:
     cal = calendar_mod.load(cfg, now)
     horizon = timedelta(hours=12)
     events = (
-        calendar_mod.upcoming(cal.events, inst.symbol, inst.bare, horizon, now)
-        if cal.ok
-        else []
+        calendar_mod.upcoming(cal.events, inst.symbol, inst.bare, horizon, now) if cal.ok else []
     )
 
     # 3. Memory slice — ACTIVE beliefs and live map nodes, context-conditioned.
@@ -154,7 +152,8 @@ def run(cfg: Config, qkt: Qkt, store: Store, inst: Instrument) -> CycleResult:
     # 6. Size — arithmetic. Entry estimated from the quote (market order).
     entry = float(ctx.quote["ask" if prop.side == "BUY" else "bid"])
     sized = size(
-        cfg, inst,
+        cfg,
+        inst,
         equity=ctx.equity,
         entry=entry,
         sl=float(prop.sl),  # validate() guarantees sl on TRADE
@@ -165,10 +164,17 @@ def run(cfg: Config, qkt: Qkt, store: Store, inst: Instrument) -> CycleResult:
     base.conviction_mult = sized.conviction_mult
 
     # 7. Gates — deterministic, after the proposal, before the venue.
-    proposal_for_gates = {**prop.raw, "entry_price": entry, "side": prop.side,
-                          "sl": prop.sl, "tp": prop.tp}
+    proposal_for_gates = {
+        **prop.raw,
+        "entry_price": entry,
+        "side": prop.side,
+        "sl": prop.sl,
+        "tp": prop.tp,
+    }
     rejects = check(
-        cfg, inst, proposal_for_gates,
+        cfg,
+        inst,
+        proposal_for_gates,
         equity=ctx.equity,
         book=book,
         lots=sized.lots,
@@ -184,8 +190,7 @@ def run(cfg: Config, qkt: Qkt, store: Store, inst: Instrument) -> CycleResult:
         return CycleResult(did, "GATED", "; ".join(str(r) for r in rejects))
 
     # 8. Execute — the only path to the venue.
-    fill = place(cfg, qkt, inst, side=prop.side, lots=sized.lots,
-                 sl=float(prop.sl), tp=prop.tp)
+    fill = place(cfg, qkt, inst, side=prop.side, lots=sized.lots, sl=float(prop.sl), tp=prop.tp)
 
     base.action = "TRADE"
     base.accepted = fill.accepted

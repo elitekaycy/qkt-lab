@@ -10,9 +10,16 @@ from lab.agent import AgentError, _extract_json, validate
 
 def ok_trade(**kw):
     base = {
-        "action": "TRADE", "side": "BUY", "sl": 2606.2, "tp": 2621.4,
-        "conviction": 0.6, "setup": "x", "factors": ["a:b"], "regime": {},
-        "thesis": "t", "invalidation": "i",
+        "action": "TRADE",
+        "side": "BUY",
+        "sl": 2606.2,
+        "tp": 2621.4,
+        "conviction": 0.6,
+        "setup": "x",
+        "factors": ["a:b"],
+        "regime": {},
+        "thesis": "t",
+        "invalidation": "i",
     }
     base.update(kw)
     return base

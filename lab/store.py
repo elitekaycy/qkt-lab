@@ -90,10 +90,7 @@ class Store:
     def record(self, d: Decision) -> int:
         data = asdict(d)
         cols = list(data)
-        vals = [
-            Jsonb(data[k]) if k in _JSON_COLS else data[k]
-            for k in cols
-        ]
+        vals = [Jsonb(data[k]) if k in _JSON_COLS else data[k] for k in cols]
         sql = (
             f"INSERT INTO decision ({', '.join(cols)}) "
             f"VALUES ({', '.join(['%s'] * len(cols))}) RETURNING id"
@@ -130,8 +127,17 @@ class Store:
                 ON CONFLICT (ticket) DO NOTHING
                 """,
                 (
-                    ticket, closed_at, close_price, gross_pnl, commission, swap,
-                    net_pnl, r_multiple, lots_closed, duration_s, Jsonb(deals),
+                    ticket,
+                    closed_at,
+                    close_price,
+                    gross_pnl,
+                    commission,
+                    swap,
+                    net_pnl,
+                    r_multiple,
+                    lots_closed,
+                    duration_s,
+                    Jsonb(deals),
                 ),
             )
             c.commit()

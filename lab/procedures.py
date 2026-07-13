@@ -182,8 +182,10 @@ class Runner:
         try:
             r = httpx.get(
                 url,
-                params={k: str(v).format(**params) if params else v
-                        for k, v in (fetch.get("params") or {}).items()},
+                params={
+                    k: str(v).format(**params) if params else v
+                    for k, v in (fetch.get("params") or {}).items()
+                },
                 headers=fetch.get("headers") or {},
                 timeout=self.timeout_s,
                 follow_redirects=True,

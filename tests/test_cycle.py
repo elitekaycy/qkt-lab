@@ -34,9 +34,14 @@ class FakeQkt:
     def bars(self, symbol, tf, count=200):
         base = 2600.0
         return [
-            {"t": 1752400000000 + i * 3600_000, "o": base + i * 0.1,
-             "h": base + i * 0.1 + 2, "l": base + i * 0.1 - 2,
-             "c": base + i * 0.1 + 1, "v": 100 + i}
+            {
+                "t": 1752400000000 + i * 3600_000,
+                "o": base + i * 0.1,
+                "h": base + i * 0.1 + 2,
+                "l": base + i * 0.1 - 2,
+                "c": base + i * 0.1 + 1,
+                "v": 100 + i,
+            }
             for i in range(count)
         ]
 
@@ -49,11 +54,25 @@ class FakeQkt:
     def buy(self, **kw):
         self.orders.append(kw)
         if not self.accept:
-            return {"ok": False, "ticket": 0, "deal": 0, "fillPrice": None,
-                    "retcode": 10013, "error": "market closed", "symbol": "XAUUSDm"}
-        return {"ok": True, "ticket": 88412, "deal": 51199, "fillPrice": 2609.94,
-                "retcode": 10009, "error": None, "symbol": "XAUUSDm",
-                "qktVersion": "0.48.0"}
+            return {
+                "ok": False,
+                "ticket": 0,
+                "deal": 0,
+                "fillPrice": None,
+                "retcode": 10013,
+                "error": "market closed",
+                "symbol": "XAUUSDm",
+            }
+        return {
+            "ok": True,
+            "ticket": 88412,
+            "deal": 51199,
+            "fillPrice": 2609.94,
+            "retcode": 10009,
+            "error": None,
+            "symbol": "XAUUSDm",
+            "qktVersion": "0.48.0",
+        }
 
     sell = buy
 
@@ -74,11 +93,19 @@ class FakeStore:
 
 
 TRADE_JSON = {
-    "action": "TRADE", "side": "BUY", "sl": 2606.2, "tp": 2621.4,
-    "conviction": 0.6, "setup": "vwap pullback",
-    "factors": ["trend:1h-up"], "regime": {"session": "london"},
-    "thesis": "structure is the trade", "invalidation": "15m close below 2606",
-    "rationale_md": "…", "map_nodes_used": [], "beliefs_used": [],
+    "action": "TRADE",
+    "side": "BUY",
+    "sl": 2606.2,
+    "tp": 2621.4,
+    "conviction": 0.6,
+    "setup": "vwap pullback",
+    "factors": ["trend:1h-up"],
+    "regime": {"session": "london"},
+    "thesis": "structure is the trade",
+    "invalidation": "15m close below 2606",
+    "rationale_md": "…",
+    "map_nodes_used": [],
+    "beliefs_used": [],
     "unexplained": None,
 }
 
@@ -89,10 +116,14 @@ def wired(cfg, tmp_path, monkeypatch):
     from lab.config import Calendar
 
     cache = tmp_path / "upcoming.yaml"
-    cache.write_text(yaml.safe_dump({
-        "fetched_at": datetime.now(UTC).isoformat(),
-        "events": [],
-    }))
+    cache.write_text(
+        yaml.safe_dump(
+            {
+                "fetched_at": datetime.now(UTC).isoformat(),
+                "events": [],
+            }
+        )
+    )
     c = cfg_with(
         cfg,
         state_dir=tmp_path / "state",
@@ -128,8 +159,9 @@ def test_trade_end_to_end(wired, monkeypatch):
 
 
 def test_no_trade_is_recorded_not_skipped(wired, monkeypatch):
-    agent_returns(monkeypatch, {"action": "NO_TRADE", "conviction": 0.15,
-                                "thesis": "no edge this hour"})
+    agent_returns(
+        monkeypatch, {"action": "NO_TRADE", "conviction": 0.15, "thesis": "no edge this hour"}
+    )
     store = FakeStore()
     r = cycle.run(wired, FakeQkt(), store, wired.instruments[0])
     assert r.action == "NO_TRADE"
@@ -151,9 +183,14 @@ def test_bad_rr_is_gated_and_journaled(wired, monkeypatch):
 
 
 def test_stale_calendar_gates_the_trade(wired, monkeypatch):
-    wired.calendar.cache.write_text(yaml.safe_dump({
-        "fetched_at": "2026-07-01T00:00:00Z", "events": [],
-    }))
+    wired.calendar.cache.write_text(
+        yaml.safe_dump(
+            {
+                "fetched_at": "2026-07-01T00:00:00Z",
+                "events": [],
+            }
+        )
+    )
     agent_returns(monkeypatch, TRADE_JSON)
     store, qkt = FakeStore(), FakeQkt()
     r = cycle.run(wired, qkt, store, wired.instruments[0])
@@ -197,9 +234,13 @@ def test_venue_reject_is_recorded_with_the_reason(wired, monkeypatch):
 def test_arm_assignment_is_deterministic(cfg):
     import copy
 
-    c = cfg_with(cfg, raw={**copy.deepcopy(cfg.raw),
-                           "experiment": {"ab_enabled": True,
-                                          "arms": ["beliefs", "control"]}})
+    c = cfg_with(
+        cfg,
+        raw={
+            **copy.deepcopy(cfg.raw),
+            "experiment": {"ab_enabled": True, "arms": ["beliefs", "control"]},
+        },
+    )
     t = datetime(2026, 7, 14, 8, 0, tzinfo=UTC)
     a1 = cycle.assign_arm(c, "ICM:XAUUSD", t)
     a2 = cycle.assign_arm(c, "ICM:XAUUSD", t)

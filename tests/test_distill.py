@@ -17,13 +17,19 @@ def beliefs_cfg(cfg, tmp_path):
 
 def test_add_writes_a_candidate_and_discards_model_status(cfg, tmp_path):
     c = beliefs_cfg(cfg, tmp_path)
-    got = apply_ops(c, [{
-        "op": "ADD", "id": "gold-vwap-london",
-        "status": "ACTIVE",  # the model trying to bless itself
-        "statement": "vwap pullbacks resolve up",
-        "predicate": ["symbol = ICM:XAUUSD", "regime.session = london"],
-        "mechanism": "[[london-liquidity]]",
-    }])
+    got = apply_ops(
+        c,
+        [
+            {
+                "op": "ADD",
+                "id": "gold-vwap-london",
+                "status": "ACTIVE",  # the model trying to bless itself
+                "statement": "vwap pullbacks resolve up",
+                "predicate": ["symbol = ICM:XAUUSD", "regime.session = london"],
+                "mechanism": "[[london-liquidity]]",
+            }
+        ],
+    )
     assert got["gold-vwap-london"] == "written"
     text = (c.beliefs.path / "gold-vwap-london.md").read_text()
     assert "status: CANDIDATE" in text
@@ -32,10 +38,16 @@ def test_add_writes_a_candidate_and_discards_model_status(cfg, tmp_path):
 
 def test_prose_predicate_is_rejected(cfg, tmp_path):
     c = beliefs_cfg(cfg, tmp_path)
-    got = apply_ops(c, [{
-        "op": "ADD", "id": "vibes",
-        "predicate": ["gold rises when people are scared"],
-    }])
+    got = apply_ops(
+        c,
+        [
+            {
+                "op": "ADD",
+                "id": "vibes",
+                "predicate": ["gold rises when people are scared"],
+            }
+        ],
+    )
     assert got["vibes"].startswith("rejected")
     assert not (c.beliefs.path / "vibes.md").exists()
 
@@ -67,7 +79,8 @@ class FakeStore:
 
 def test_calibration_small_sample_does_not_support_fitted():
     rows = [{"conviction": 0.9, "r_multiple": 2.0}] * 5 + [
-        {"conviction": 0.1, "r_multiple": -1.0}] * 5
+        {"conviction": 0.1, "r_multiple": -1.0}
+    ] * 5
     cal = calibrate_run(FakeStore(rows))
     assert not cal.supports_fitted  # n<20 per bucket: no promotion on 10 trades
 

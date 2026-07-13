@@ -40,9 +40,15 @@ def test_flat_stage_ignores_conviction(cfg):
 
 
 def test_fitted_stage_lets_conviction_move_size(cfg):
-    c = cfg_with(cfg, sizing=Sizing(stage="fitted", conviction_max_mult=2.0,
-                                    kelly_fraction=0.5,
-                                    fit={"slope": 1.0, "intercept": 0.5}))
+    c = cfg_with(
+        cfg,
+        sizing=Sizing(
+            stage="fitted",
+            conviction_max_mult=2.0,
+            kelly_fraction=0.5,
+            fit={"slope": 1.0, "intercept": 0.5},
+        ),
+    )
     inst = c.instruments[0]
     low = sizing.size(c, inst, equity=10000, entry=2610.0, sl=2600.0, conviction=0.1)
     high = sizing.size(c, inst, equity=10000, entry=2610.0, sl=2600.0, conviction=0.9)
@@ -77,18 +83,21 @@ def test_portfolio_heat_cap_blocks_the_next_correlated_position(cfg):
     Once the heat budget is consumed, the next position gets nothing."""
     inst = cfg.instruments[0]
     # heat cap 2% of 10k = $200 already fully consumed
-    got = sizing.size(cfg, inst, equity=10000, entry=2610.0, sl=2606.0,
-                      conviction=0.8, open_risk_currency=200.0)
+    got = sizing.size(
+        cfg, inst, equity=10000, entry=2610.0, sl=2606.0, conviction=0.8, open_risk_currency=200.0
+    )
     assert got.lots == 0.0
     assert got.correlation_haircut == 0.0
 
 
 def test_heat_headroom_shrinks_size_gradually(cfg):
     inst = cfg.instruments[0]
-    free = sizing.size(cfg, inst, equity=10000, entry=2610.0, sl=2606.0,
-                       conviction=0.5, open_risk_currency=0.0)
-    tight = sizing.size(cfg, inst, equity=10000, entry=2610.0, sl=2606.0,
-                        conviction=0.5, open_risk_currency=175.0)  # $25 headroom
+    free = sizing.size(
+        cfg, inst, equity=10000, entry=2610.0, sl=2606.0, conviction=0.5, open_risk_currency=0.0
+    )
+    tight = sizing.size(
+        cfg, inst, equity=10000, entry=2610.0, sl=2606.0, conviction=0.5, open_risk_currency=175.0
+    )  # $25 headroom
     assert 0 < tight.lots < free.lots
 
 
@@ -109,8 +118,7 @@ def test_tiny_equity_yields_zero_not_a_sub_minimum_order(cfg):
 
 def test_zero_stop_distance_raises(cfg):
     with pytest.raises(ValueError):
-        sizing.size(cfg, cfg.instruments[0], equity=10000, entry=2610.0, sl=2610.0,
-                    conviction=0.5)
+        sizing.size(cfg, cfg.instruments[0], equity=10000, entry=2610.0, sl=2610.0, conviction=0.5)
 
 
 def test_hand_computed_example(cfg):

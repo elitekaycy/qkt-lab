@@ -77,8 +77,10 @@ class Chain:
         sign = "+" if self.net_sign > 0 else "-"
         lines = [f"({sign}) {path}  [lag: {self.slowest_lag}]"]
         for e in self.hops:
-            lines.append(f"    {e.src} -> {e.dst} ({'+' if e.sign > 0 else '-'}, "
-                         f"{e.strength}, {e.lag}): {e.channel}")
+            lines.append(
+                f"    {e.src} -> {e.dst} ({'+' if e.sign > 0 else '-'}, "
+                f"{e.strength}, {e.lag}): {e.channel}"
+            )
         for c in self.conditions:
             lines.append(f"    ⚠ {c}")
         return "\n".join(lines)
@@ -136,8 +138,9 @@ class Graph:
                 )
                 for e in (meta.get("edges") or [])
             )
-            nodes[nid] = Node(id=nid, kind=str(meta.get("kind", "state")),
-                              body=body.strip(), edges=edges)
+            nodes[nid] = Node(
+                id=nid, kind=str(meta.get("kind", "state")), body=body.strip(), edges=edges
+            )
         return cls(nodes)
 
     def traverse(self, source: str, target: str, max_hops: int = 4) -> Traversal:
@@ -164,9 +167,7 @@ class Graph:
 
         signs = {c.net_sign for c in chains}
         conflict = len(signs) > 1
-        resolver = "\n  ".join(
-            sorted({cond for c in chains for cond in c.conditions})
-        )
+        resolver = "\n  ".join(sorted({cond for c in chains for cond in c.conditions}))
         # Stronger/faster chains first: fewer hops is a rough proxy for confidence.
         chains.sort(key=lambda c: (len(c.hops), c.slowest_lag))
         return Traversal(tuple(chains), conflict, resolver)

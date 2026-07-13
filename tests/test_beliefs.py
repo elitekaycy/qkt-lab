@@ -10,14 +10,17 @@ from lab.beliefs import PredicateError, Scored, benjamini_hochberg, compile_pred
 
 # --- predicate grammar ----------------------------------------------------------
 
+
 def test_predicate_compiles_to_parameterized_sql():
-    where, params = compile_predicate([
-        "symbol = ICM:XAUUSD",
-        "side = BUY",
-        "regime.session = london",
-        "regime.atr14 between 3 and 5",
-        "factors contains level:vwap-touch",
-    ])
+    where, params = compile_predicate(
+        [
+            "symbol = ICM:XAUUSD",
+            "side = BUY",
+            "regime.session = london",
+            "regime.atr14 between 3 and 5",
+            "factors contains level:vwap-touch",
+        ]
+    )
     assert "symbol = %s" in where
     assert "regime->>%s = %s" in where
     assert "(regime->>%s)::numeric BETWEEN %s AND %s" in where
@@ -43,6 +46,7 @@ def test_injection_shaped_clause_is_rejected():
 
 # --- benjamini-hochberg -----------------------------------------------------------
 
+
 def test_bh_one_lucky_p_out_of_forty_does_not_survive():
     """The max-of-N statistic, dead: 39 noise p-values and one at 0.04. Raw
     p<0.05 would call it a discovery; the family-wide correction does not."""
@@ -65,9 +69,19 @@ def test_bh_step_up_includes_everything_below_the_threshold_rank():
 
 # --- status transitions -----------------------------------------------------------
 
+
 def scored(n=40, mean_r=0.3, t=2.5, p=0.01):
-    return Scored("x", n, wins=n // 2, losses=n - n // 2, mean_r=mean_r,
-                  t_stat=t, p_value=p, supporting=[], refuting=[])
+    return Scored(
+        "x",
+        n,
+        wins=n // 2,
+        losses=n - n // 2,
+        mean_r=mean_r,
+        t_stat=t,
+        p_value=p,
+        supporting=[],
+        refuting=[],
+    )
 
 
 def test_candidate_below_min_n_stays_candidate_whatever_the_stats(cfg):

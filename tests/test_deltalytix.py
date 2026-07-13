@@ -25,14 +25,23 @@ T = Target(
 
 def episode(**kw):
     base = dict(
-        symbol="ICM:XAUUSD", side="BUY", lots=0.13,
+        symbol="ICM:XAUUSD",
+        side="BUY",
+        lots=0.13,
         ts=datetime(2026, 7, 14, 8, 0, 4, tzinfo=UTC),
         closed_at=datetime(2026, 7, 14, 14, 10, 33, tzinfo=UTC),
-        fill_price=2609.94, close_price=2621.40,
-        gross_pnl=148.98, commission=-0.91, swap=-0.22, net_pnl=147.85,
-        duration_s=22229, ticket=88412,
-        thesis="structure is the trade", rationale_md="fuller reasoning",
-        setup="vwap pullback", factors=["trend:1h-up", "level:vwap-touch"],
+        fill_price=2609.94,
+        close_price=2621.40,
+        gross_pnl=148.98,
+        commission=-0.91,
+        swap=-0.22,
+        net_pnl=147.85,
+        duration_s=22229,
+        ticket=88412,
+        thesis="structure is the trade",
+        rationale_md="fuller reasoning",
+        setup="vwap pullback",
+        factors=["trend:1h-up", "level:vwap-touch"],
         charts=["/lab/state/charts/2026-07-14T08/XAUUSD-1h.png"],
     )
     base.update(kw)
@@ -42,12 +51,24 @@ def episode(**kw):
 def test_uuid_recipe_matches_the_apps_signature():
     """Replicate the app's exact pipe-join by hand for one known trade."""
     row = to_trade_row(episode(), T)
-    sig = "|".join([
-        "local-dashboard-user", "LAB-XAU", "XAUUSD",
-        "2026-07-14T08:00:04+00:00", "2026-07-14T14:10:33+00:00",
-        "2609.94", "2621.4", "13", "88412", "88412",
-        "22229.0", "Long", "148.98", "0.91",
-    ])
+    sig = "|".join(
+        [
+            "local-dashboard-user",
+            "LAB-XAU",
+            "XAUUSD",
+            "2026-07-14T08:00:04+00:00",
+            "2026-07-14T14:10:33+00:00",
+            "2609.94",
+            "2621.4",
+            "13",
+            "88412",
+            "88412",
+            "22229.0",
+            "Long",
+            "148.98",
+            "0.91",
+        ]
+    )
     assert row["id"] == str(uuid.uuid5(NAMESPACE, sig))
 
 
@@ -66,8 +87,8 @@ def test_pnl_is_gross_and_commission_positive():
     """The app computes pnl - commission itself. Pre-subtracting double-counts;
     a negative commission would ADD to displayed pnl."""
     row = to_trade_row(episode(), T)
-    assert row["pnl"] == 148.98          # gross, not 147.85
-    assert row["commission"] == 0.91     # positive magnitude, not -0.91
+    assert row["pnl"] == 148.98  # gross, not 147.85
+    assert row["commission"] == 0.91  # positive magnitude, not -0.91
 
 
 def test_side_is_long_short_and_time_in_seconds():

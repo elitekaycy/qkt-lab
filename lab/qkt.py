@@ -52,9 +52,7 @@ class Qkt:
         last: Exception | None = None
         for attempt in range(self.retries + 1):
             try:
-                p = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=self.timeout_s
-                )
+                p = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout_s)
             except subprocess.TimeoutExpired:
                 last = QktUnavailable(f"{verb} timed out after {self.timeout_s}s")
                 time.sleep(2**attempt)

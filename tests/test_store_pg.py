@@ -32,13 +32,25 @@ def store():
 
 def trade_decision(ticket=88412):
     return Decision(
-        as_name="lab-xau", symbol="ICM:XAUUSD", action="TRADE", side="BUY",
-        lots=0.13, sl=2606.2, tp=2621.4, conviction=0.6,
-        setup="vwap pullback", factors=["trend:1h-up", "level:vwap-touch"],
+        as_name="lab-xau",
+        symbol="ICM:XAUUSD",
+        action="TRADE",
+        side="BUY",
+        lots=0.13,
+        sl=2606.2,
+        tp=2621.4,
+        conviction=0.6,
+        setup="vwap pullback",
+        factors=["trend:1h-up", "level:vwap-touch"],
         regime={"session": "london", "atr14": 4.12},
-        thesis="t", rationale_md="r", charts=["state/charts/x.png"],
-        ticket=ticket, fill_price=2609.94, accepted=True,
-        risk_at_entry=48.62, equity_at_entry=10000.0,
+        thesis="t",
+        rationale_md="r",
+        charts=["state/charts/x.png"],
+        ticket=ticket,
+        fill_price=2609.94,
+        accepted=True,
+        risk_at_entry=48.62,
+        equity_at_entry=10000.0,
     )
 
 
@@ -49,18 +61,33 @@ def test_full_round_trip(store):
     assert len(store.open_tickets()) == 1
 
     store.record_outcome(
-        ticket=88412, closed_at=datetime.now(UTC), close_price=2621.4,
-        gross_pnl=148.98, commission=-0.91, swap=-0.22, net_pnl=147.85,
-        r_multiple=3.04, lots_closed=0.13, duration_s=22229,
+        ticket=88412,
+        closed_at=datetime.now(UTC),
+        close_price=2621.4,
+        gross_pnl=148.98,
+        commission=-0.91,
+        swap=-0.22,
+        net_pnl=147.85,
+        r_multiple=3.04,
+        lots_closed=0.13,
+        duration_s=22229,
         deals=[{"dealTicket": 51199}],
     )
     assert store.open_tickets() == []  # joined -> no longer open
 
     # Idempotent: the joiner running twice must be a no-op, not a crash or a dupe.
     store.record_outcome(
-        ticket=88412, closed_at=datetime.now(UTC), close_price=2621.4,
-        gross_pnl=148.98, commission=-0.91, swap=-0.22, net_pnl=147.85,
-        r_multiple=3.04, lots_closed=0.13, duration_s=22229, deals=[],
+        ticket=88412,
+        closed_at=datetime.now(UTC),
+        close_price=2621.4,
+        gross_pnl=148.98,
+        commission=-0.91,
+        swap=-0.22,
+        net_pnl=147.85,
+        r_multiple=3.04,
+        lots_closed=0.13,
+        duration_s=22229,
+        deals=[],
     )
     rows = store.query("SELECT count(*) AS n FROM outcome")
     assert rows[0]["n"] == 1
@@ -76,9 +103,17 @@ def test_jsonb_predicates_work(store):
     """The whole reason the store is typed: belief predicates are SQL."""
     store.record(trade_decision(ticket=1001))
     store.record_outcome(
-        ticket=1001, closed_at=datetime.now(UTC), close_price=2620.0,
-        gross_pnl=100.0, commission=-1.0, swap=0.0, net_pnl=99.0,
-        r_multiple=2.0, lots_closed=0.13, duration_s=100, deals=[],
+        ticket=1001,
+        closed_at=datetime.now(UTC),
+        close_price=2620.0,
+        gross_pnl=100.0,
+        commission=-1.0,
+        swap=0.0,
+        net_pnl=99.0,
+        r_multiple=2.0,
+        lots_closed=0.13,
+        duration_s=100,
+        deals=[],
     )
     rows = store.query(
         """
@@ -93,11 +128,18 @@ def test_jsonb_predicates_work(store):
 
 
 def test_no_trade_and_gated_rows_are_first_class(store):
-    store.record(Decision(as_name="lab-xau", symbol="ICM:XAUUSD",
-                          action="NO_TRADE", conviction=0.1))
-    store.record(Decision(as_name="lab-xau", symbol="ICM:XAUUSD", action="GATED",
-                          conviction=0.8,
-                          gate_rejects=[{"gate": "min_rr", "detail": "0.5 < 1.5"}]))
+    store.record(
+        Decision(as_name="lab-xau", symbol="ICM:XAUUSD", action="NO_TRADE", conviction=0.1)
+    )
+    store.record(
+        Decision(
+            as_name="lab-xau",
+            symbol="ICM:XAUUSD",
+            action="GATED",
+            conviction=0.8,
+            gate_rejects=[{"gate": "min_rr", "detail": "0.5 < 1.5"}],
+        )
+    )
     rows = store.query("SELECT action, count(*) AS n FROM decision GROUP BY action")
     got = {r["action"]: r["n"] for r in rows}
     assert got == {"NO_TRADE": 1, "GATED": 1}
