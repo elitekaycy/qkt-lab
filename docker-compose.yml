@@ -66,8 +66,11 @@ services:
     environment: *lab-env
     # The crontab is GENERATED from lab.yaml so there is one source of truth
     # for when things run. supercronic logs to stdout: `docker compose logs scheduler`.
+    # supercronic must be an ABSOLUTE path: as pid 1 it re-execs argv[0], and a
+    # bare name found via PATH fails that re-exec with "no such file or directory".
     command: >
-      bash -c "python3 bin/gen-crontab > /tmp/crontab && exec supercronic /tmp/crontab"
+      bash -c "python3 bin/gen-crontab > /tmp/crontab
+      && exec /usr/local/bin/supercronic /tmp/crontab"
 
   charts:
     image: caddy:2-alpine
