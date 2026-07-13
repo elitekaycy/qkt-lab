@@ -10,7 +10,7 @@ FROM debian:12-slim
 
 COPY --from=qkt /opt/java /opt/java
 COPY --from=qkt /opt/qkt /opt/qkt
-ENV JAVA_HOME=/opt/java PATH="/opt/qkt/bin:/opt/java/bin:/usr/local/bin:${PATH}"
+ENV JAVA_HOME=/opt/java/runtime PATH="/opt/qkt/bin:/opt/java/runtime/bin:/usr/local/bin:${PATH}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 python3-venv git ca-certificates curl nodejs npm \
