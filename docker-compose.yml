@@ -11,7 +11,7 @@
 
 services:
   mt5-gateway:
-    image: elitekaycy/mt5-gateway-api:0.3.2
+    image: elitekaycy/mt5-gateway-api:0.3.3
     container_name: lab-mt5-gateway
     restart: unless-stopped
     ports:

@@ -159,7 +159,12 @@ def test_event_for_another_symbol_does_not_block(cfg):
 
 def test_low_impact_event_does_not_block(cfg):
     ev = [
-        {"event": "minor survey", "at": NOW.isoformat(), "impact": "low", "affects": ["EXNESS:XAUUSD"]}
+        {
+            "event": "minor survey",
+            "at": NOW.isoformat(),
+            "impact": "low",
+            "affects": ["EXNESS:XAUUSD"],
+        }
     ]
     r = check(
         cfg, cfg.instruments[0], proposal(), equity=10000, book=FLAT, lots=0.13, events=ev, now=NOW

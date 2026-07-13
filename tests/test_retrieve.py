@@ -19,7 +19,12 @@ def mem_cfg(cfg, tmp_path):
 
 
 CPI_EVENT = [
-    {"event": "US CPI", "at": "2026-07-14T12:30:00Z", "impact": "high", "affects": ["EXNESS:XAUUSD"]}
+    {
+        "event": "US CPI",
+        "at": "2026-07-14T12:30:00Z",
+        "impact": "high",
+        "affects": ["EXNESS:XAUUSD"],
+    }
 ]
 
 
