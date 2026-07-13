@@ -1,0 +1,192 @@
+# qkt-lab — the one file you edit.
+#
+# Everything the lab does is reachable from here. If a behaviour is not
+# expressible in this file, that is a bug in the design, not a reason to
+# hardcode it.
+#
+# Secrets are NEVER written here. Use ${VAR} and put the value in .env.
+
+lab:
+  mode: demo                  # demo | live. `live` refuses to start until the
+                              # phase-6 A/B has run and passed. See docs/specs/phase-6.
+  timezone: UTC               # everything internal is UTC. Display only.
+  state_dir: ./state          # charts, run logs, artifacts
+  kill_switch: ./KILL         # if this file exists, no order is ever placed.
+                              # `touch KILL` is the emergency stop.
+
+# ---------------------------------------------------------------------------
+# Execution surface — how we reach the venue.
+# ---------------------------------------------------------------------------
+qkt:
+  bin: qkt                            # the qkt CLI on PATH
+  config: ./qkt.config.yaml           # qkt's own config (brokers, gateway urls)
+  broker: ICM                         # the broker prefix used in BROKER:SYMBOL
+  timeout_s: 30
+  retries: 2                          # qkt's bot verbs use retryAttempts=0, so
+                                      # the lab owns transient-failure retry.
+
+# ---------------------------------------------------------------------------
+# What we trade.
+# ---------------------------------------------------------------------------
+instruments:
+  - symbol: ICM:XAUUSD
+    contract_value: 100               # 1 lot = 100 oz. Used for position sizing.
+    playbook: playbooks/xauusd.md
+    schedule: "0 * * * *"             # hourly, on the 1h bar close
+    timeframes: [1h, 15m]             # charts + bars handed to the model
+    bars: 200                         # per timeframe
+    max_lots: 0.10                    # hard per-instrument cap
+    sources: [calendar, fred, reddit] # which harvesters run for this instrument
+
+# ---------------------------------------------------------------------------
+# The agent. Three separate sessions, three separate prompts, three separate
+# sets of write permissions. None of them marks its own homework.
+# ---------------------------------------------------------------------------
+agent:
+  model: claude-fable-5
+  as_prefix: lab                      # --as lab-xau. MUST keep the resulting
+                                      # `bot-<as>-<epochms>` order comment under
+                                      # 31 chars or MT5 rejects the order outright.
+
+  trader:
+    prompt: prompts/trader.md
+    context_budget_tokens: 8000       # the packet. Bigger is not better.
+    # The trader gets READ-ONLY qkt verbs. It cannot place an order and it does
+    # not choose position size. It emits a proposal; code gates and executes.
+
+  distiller:
+    prompt: prompts/distiller.md
+    schedule: "0 22 * * *"            # nightly, after the session
+    # Proposes belief edits. Cannot set a belief's status, n, or ticket lists.
+
+  researcher:
+    prompt: prompts/researcher.md
+    schedule: "0 6 * * *"             # daily
+    budget_tokens: 200000             # per run. Research is open-ended, not unbounded.
+    web_search: true
+    anomaly_triggers:
+      price_move_atr: 3.0             # moved >3 ATR with nothing in context explaining it
+      loss_with_intact_thesis: true   # lost badly, rationale still looks right
+      strong_driver_failed: true      # a map node marked `strong` didn't fire
+      surprise_vs_consensus: true     # a release printed far off forecast
+
+# ---------------------------------------------------------------------------
+# Risk. Deterministic, evaluated in code, before every order. The model never
+# sees these as suggestions — it never sees them at all.
+# ---------------------------------------------------------------------------
+risk:
+  risk_per_trade_pct: 0.5             # of equity, per trade. Sizing is arithmetic:
+                                      #   lots = (equity * pct) / (|entry-sl| * contract_value)
+  conviction_scaling: false           # if true, model conviction scales size within
+                                      # [0.5x, 1.0x]. Off until conviction is shown
+                                      # to be calibrated (phase 6).
+
+gates:                                # ALL must pass. Any rejection = no order.
+  require_sl: true                    # no stop, no trade. Never disable.
+  min_rr: 1.5                         # recomputed from real prices; the model's
+                                      # own expected_rr is never trusted.
+  max_open_positions: 3               # counted over LAB-OWNED tickets from our own
+  max_exposure_lots: 0.5              # DB — never from `qkt bot positions`, which
+                                      # has no magic filter and sees other strategies.
+  max_daily_loss_pct: 2.0             # realized-today + floating, vs equity. Breach
+                                      # halts new orders for the rest of the day.
+  news_blackout_minutes: 30           # +/- around a high-impact release for this symbol
+
+# ---------------------------------------------------------------------------
+# Memory. Four kinds, three validation regimes. See docs/MEMORY.md.
+# ---------------------------------------------------------------------------
+memory:
+  root: memory/
+
+  # Freely accumulated. Validated by "did it work".
+  procedures: memory/procedures/
+  # Freely accumulated, with a decaying usefulness score.
+  sources: memory/sources/
+  # The causal map. Validated against MARKET DATA, not against our trades —
+  # which is why it can be rich and confident immediately.
+  map: memory/map/
+
+  # Tactical beliefs. The ONLY memory that claims a tradeable edge, and the only
+  # one with a hard statistical gate.
+  beliefs:
+    path: memory/beliefs/
+    activate_min_trades: 30           # a floor for sanity, not a blessing. A true
+                                      # per-trade Sharpe of 0.2 needs ~96 trades to
+                                      # reject zero edge.
+    multiple_testing: benjamini-hochberg   # applied family-wide across ALL candidates
+    alpha: 0.05                       # each distill cycle. One lesson out of forty
+                                      # clearing p<0.05 is a max-of-N statistic.
+    score_on: realized_net_pnl        # never on the model's self-assessment.
+    withhold_candidates: true         # CANDIDATE beliefs are NOT shown to the trader.
+                                      # If it could see them it would act on them and
+                                      # they would confirm themselves.
+
+# ---------------------------------------------------------------------------
+# The decision log — the machine's source of truth. Typed, structured, queryable.
+# Belief predicates are evaluated as SQL against this.
+# ---------------------------------------------------------------------------
+store:
+  dsn: ${LAB_DATABASE_URL}            # postgres://lab:***@localhost:5432/lab
+  join_interval: "*/15 * * * *"       # outcome joiner
+  unjoined_alarm_days: 3              # a ticket open this long with no OUT deal
+                                      # is a bug, not a trade. Alarm, don't ignore.
+
+# ---------------------------------------------------------------------------
+# The journal UI — what YOU open, read, search, and browse.
+# Deltalytix (self-hosted). Not on the loop's critical path: if it is down,
+# trades still execute and beliefs still score.
+# ---------------------------------------------------------------------------
+journal:
+  deltalytix:
+    enabled: true
+    dsn: ${DELTALYTIX_DATABASE_URL}
+    user_id: local-dashboard-user
+    user_email: local-dashboard@deltalytix.local
+    account_number: LAB-XAU
+    starting_balance: 10000           # required for the equity curve to render
+    charts_base_url: http://localhost:8080/charts   # images[] must be URLs, not paths
+    export_no_trades: false           # NO_TRADE/GATED rows cannot exist in its schema.
+                                      # They stay in the lab store where the machine
+                                      # learns from them.
+
+# ---------------------------------------------------------------------------
+# Data sources. Each is a plugin behind fetch(symbol, now) -> [Signal].
+# A missing source is recorded as MISSING, never as a neutral reading.
+# ---------------------------------------------------------------------------
+sources:
+  calendar:
+    enabled: true
+    provider: ${CALENDAR_PROVIDER}    # pinned by the phase-0 spike
+    high_impact_only: true            # only high-impact events gate
+
+  fred:
+    enabled: true
+    api_key: ${FRED_API_KEY}
+    series: [DFII10, DTWEXBGS, T10Y2Y]   # 10y real yield, dollar index, curve
+    refresh: daily
+
+  reddit:
+    enabled: true
+    client_id: ${REDDIT_CLIENT_ID}
+    client_secret: ${REDDIT_CLIENT_SECRET}
+    subreddits: [Gold, wallstreetbets, commodities]
+    max_posts: 50
+    digest_max_tokens: 200            # a bounded digest, never a raw dump
+    # Sentiment is logged as a FACTOR and gates nothing. Whether it has any
+    # relationship to realized R is a question the belief loop answers, not one
+    # we assume. If it doesn't, it gets an INVALIDATED belief and we stop paying.
+
+  x:
+    enabled: false                    # X has no free read API — the free tier is
+                                      # write-only, reading needs the paid plan.
+                                      # Off until someone decides to pay.
+
+# ---------------------------------------------------------------------------
+# Phase 6. The experiment that could tell us the memory is worthless.
+# ---------------------------------------------------------------------------
+experiment:
+  ab_enabled: false
+  arms: [beliefs, control]            # identical gates and sizing; control gets
+                                      # the playbook but no beliefs.
+  assignment: hash                    # deterministic on (ts, symbol)
+  min_trades_per_arm: 100             # pre-register BEFORE seeing data.
