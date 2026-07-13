@@ -16,7 +16,6 @@ Everything is driven from one file: [`lab.yaml`](lab.yaml).
 
 ```
 cp .env.example .env          # CLAUDE_CODE_OAUTH_TOKEN + db passwords
-docker build --target runtime -t qkt:bot /path/to/qkt   # until qkt-lab#21 lands
 docker compose up -d                     # gateway, db, scheduler, charts
 docker compose --profile journal up -d   # + the Deltalytix UI on localhost:3000
 touch KILL                               # emergency stop
