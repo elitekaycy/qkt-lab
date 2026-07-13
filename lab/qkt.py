@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 
@@ -38,7 +39,12 @@ class Qkt:
         retries: int = 2,
     ) -> None:
         self.bin = bin.split()  # allows `docker run ... qkt` as a "binary"
-        self.config = config
+        # Never passed as --config: qkt's argv parser counts option VALUES as
+        # positionals, so for verbs with no positional (`positions`, `history`)
+        # the config path itself gets read as the symbol (qkt#804). Instead the
+        # subprocess runs from the config's directory and qkt discovers
+        # ./qkt.config.yaml on its default search path.
+        self.cwd = str(Path(config).resolve().parent) if config else None
         self.timeout_s = timeout_s
         self.retries = retries
 
@@ -46,13 +52,13 @@ class Qkt:
         # Positionals first — the parser counts an option's value as a positional,
         # so `bot positions --broker icm` would read "icm" as the symbol.
         cmd = [*self.bin, "bot", verb, *args, "--json"]
-        if self.config:
-            cmd += ["--config", self.config]
 
         last: Exception | None = None
         for attempt in range(self.retries + 1):
             try:
-                p = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout_s)
+                p = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=self.timeout_s, cwd=self.cwd
+                )
             except subprocess.TimeoutExpired:
                 last = QktUnavailable(f"{verb} timed out after {self.timeout_s}s")
                 time.sleep(2**attempt)

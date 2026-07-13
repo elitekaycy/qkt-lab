@@ -24,9 +24,10 @@ def main() -> int:
         print(f"(no anomaly feed: {e})", file=sys.stderr)
 
     brief = ROOT / "prompts" / "researcher.md"
+    anomaly_lines = [f"- {a}" for a in anomalies] or ["- (none)"]
     task = "\n".join([
         "Run one research cycle now. Anomaly tickets:",
-        *(f"- {a}" for a in anomalies) or ["- (none)"],
+        *anomaly_lines,
         "",
         f"Instruments: {', '.join(i.symbol for i in cfg.instruments)}",
         f"Calendar cache to refresh: {cfg.calendar.cache}",

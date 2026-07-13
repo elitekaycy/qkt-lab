@@ -1,0 +1,16 @@
+# qkt CLI config for the lab. No secrets here: the gateway API key and the
+# expected-account guards arrive via QKT_BROKER_EXNESS_* env vars (see .env).
+#
+# expected_account_login/server make qkt refuse to trade if the gateway is
+# logged in to a different account than the one this lab was pointed at.
+
+brokers:
+  EXNESS:
+    type: mt5
+    gateway_url: "http://mt5-gateway:5001"
+    magic: 777101
+    symbol_suffix: "m"        # Exness appends m: XAUUSD -> XAUUSDm
+    server_time_zone: UTC     # Exness MT5 server time is GMT+0 year-round
+
+account:
+  currency: USD

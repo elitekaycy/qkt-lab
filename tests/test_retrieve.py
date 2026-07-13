@@ -19,7 +19,12 @@ def mem_cfg(cfg, tmp_path):
 
 
 CPI_EVENT = [
-    {"event": "US CPI", "at": "2026-07-14T12:30:00Z", "impact": "high", "affects": ["ICM:XAUUSD"]}
+    {
+        "event": "US CPI",
+        "at": "2026-07-14T12:30:00Z",
+        "impact": "high",
+        "affects": ["EXNESS:XAUUSD"],
+    }
 ]
 
 
@@ -33,7 +38,7 @@ def test_candidate_beliefs_are_withheld(cfg, tmp_path):
             "id: active-one",
             "status: ACTIVE",
             "statement: vwap pullbacks resolve up",
-            "symbols: [ICM:XAUUSD]",
+            "symbols: [EXNESS:XAUUSD]",
         ],
         "n: 34 mean_R: +0.31",
     )
@@ -43,7 +48,7 @@ def test_candidate_beliefs_are_withheld(cfg, tmp_path):
             "id: cand-one",
             "status: CANDIDATE",
             "statement: fridays are bearish",
-            "symbols: [ICM:XAUUSD]",
+            "symbols: [EXNESS:XAUUSD]",
         ],
         "n: 12",
     )

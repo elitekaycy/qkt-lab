@@ -94,7 +94,10 @@ def gather(cfg: Config, qkt: Qkt, inst: Instrument) -> Context:
     indicators: dict[str, Any] = {}
     for expr in ("atr(14)", "ema(50)", "rsi(14)"):
         try:
-            r = qkt.evaluate(expr, inst.symbol, inst.timeframes[0])
+            # count=200: qkt widens the fetch window ~3x to survive gaps, and the
+            # gateway rejects ranges over 31 days. 200 1h bars ≈ 25 widened days,
+            # still 3 warmups past the longest lookback here (ema 50).
+            r = qkt.evaluate(expr, inst.symbol, inst.timeframes[0], count=200)
             indicators[expr] = r.get("value") if r.get("isReady") else None
         except QktError:
             indicators[expr] = None

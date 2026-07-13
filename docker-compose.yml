@@ -11,13 +11,21 @@
 
 services:
   mt5-gateway:
-    image: elitekaycy/mt5-gateway-api:0.3.2
+    image: elitekaycy/mt5-gateway-api:0.3.3
     container_name: lab-mt5-gateway
     restart: unless-stopped
     ports:
       - "127.0.0.1:5001:5001"
     volumes:
       - gateway-config:/config
+    # Headless broker login: the gateway logs in on boot from these, idempotent
+    # across restarts. Values live in .env, never in this file.
+    environment:
+      MT5_LOGIN: ${MT5_LOGIN}
+      MT5_PASSWORD: ${MT5_PASSWORD}
+      MT5_SERVER: ${MT5_SERVER}
+      MT5_ENABLE_ALGO_TRADING: "1"
+      API_KEY: ${MT5_API_KEY}
 
   postgres:
     image: postgres:16-alpine
@@ -45,7 +53,10 @@ services:
     environment: &lab-env
       LAB_DATABASE_URL: postgresql://lab:${LAB_DB_PASSWORD:-lab}@postgres:5432/lab
       DELTALYTIX_DATABASE_URL: postgresql://deltalytix:${DELTALYTIX_DB_PASSWORD:-deltalytix}@deltalytix-db:5432/deltalytix
-      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN}
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      QKT_BROKER_EXNESS_API_KEY: ${MT5_API_KEY}
+      QKT_BROKER_EXNESS_EXPECTED_ACCOUNT_LOGIN: ${MT5_LOGIN}
+      QKT_BROKER_EXNESS_EXPECTED_ACCOUNT_SERVER: ${MT5_SERVER}
     command: >
       python3 -c "from lab.store import Store; from pathlib import Path;
       Store('postgresql://lab:${LAB_DB_PASSWORD:-lab}@postgres:5432/lab').migrate(Path('db/schema.sql'));
@@ -63,6 +74,10 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./:/lab
+      # Claude subscription auth: mount the host's credentials so `claude -p`
+      # rides the existing login and refreshes tokens itself. Alternative:
+      # leave this out and set CLAUDE_CODE_OAUTH_TOKEN (claude setup-token).
+      - ~/.claude:/root/.claude
     environment: *lab-env
     # The crontab is GENERATED from lab.yaml so there is one source of truth
     # for when things run. supercronic logs to stdout: `docker compose logs scheduler`.
