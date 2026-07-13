@@ -7,9 +7,23 @@ episodes into memory that makes the next decision better.
 
 Everything is driven from one file: [`lab.yaml`](lab.yaml).
 
-> **Status: design complete, implementation not started.** The specs are written,
-> the phases are planned, and the assumptions that hold it up are about to be
-> tested in Phase 0. Nothing here has traded yet.
+> **Status: built, in demo.** All six phases are implemented and tested (130
+> tests, including the false-discovery gate proven on live Postgres and the
+> keyless endpoints hit for real). Nothing here has traded real money — `mode:
+> live` refuses to start until the Phase 6 A/B has run and passed.
+
+## Run it
+
+```
+cp .env.example .env          # CLAUDE_CODE_OAUTH_TOKEN + db passwords
+docker build --target runtime -t qkt:bot /path/to/qkt   # until qkt-lab#21 lands
+docker compose up -d                     # gateway, db, scheduler, charts
+docker compose --profile journal up -d   # + the Deltalytix UI on localhost:3000
+touch KILL                               # emergency stop
+```
+
+The scheduler generates its crontab from `lab.yaml` (`bin/gen-crontab`) — editing
+a schedule there and restarting the container is the whole deployment story.
 
 ---
 
