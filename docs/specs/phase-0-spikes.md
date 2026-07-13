@@ -92,26 +92,79 @@ proposal schema. Run it 10 times.
 **Kill condition.** No headless agent, no loop. If the Max pool won't serve it,
 this becomes a cost decision before anything else is built.
 
-## S0.5 — Calendar and macro sources
+## S0.5 — The calendar cache, and a safety gate fed by an LLM (`risk:money`)
 
-**Assumption.** We can get a high-impact economic calendar with event times
-reproducibly, for free, and legally.
+**Constraint.** No API keys. The only credential in the system is the Claude
+subscription. So the economic calendar comes from RESEARCH reading the open web —
+and the news blackout gate depends on it.
 
-**Test.** Enumerate the options. FRED has a releases/dates API. ForexFactory has
-**no official API** — scraping it is fragile and of dubious standing. Find a
-source we can actually depend on.
+**The tension.** A gate must be deterministic at trade time. Its data comes from an
+LLM reading web pages. Those two facts are in conflict, and hand-waving it is how
+someone gets hurt.
 
-**Passes if** we can answer, reproducibly and from a source we're allowed to use:
-*"is there a high-impact event affecting XAUUSD in the next 60 minutes?"*
+**The design under test** (`docs/RUNTIME.md` §4): the gate **never calls an LLM**.
+RESEARCH writes `memory/calendar/upcoming.yaml` with provenance; `gates.py` reads
+the file and does arithmetic on it.
 
-**Kill condition.** Not fatal, but the `news_blackout` gate cannot ship without
-it, and trading gold through CPI unguarded is not something I'd sign off on. If
-no free source is dependable, this becomes a paid-source decision.
+**Test.**
+- Have `claude -p` (web search on) produce `upcoming.yaml` for the next 7 days:
+  event, UTC time, impact, affects[], confidence, and **≥2 independent source URLs**.
+- Verify every event and time against the primary issuer (BLS, BEA, the Fed).
+- Verify the gate refuses when the cache is stale, missing, or `uncertain`.
+
+**Passes if:**
+- ≥2 independent keyless sources can corroborate each high-impact event's **time**
+- times are correct against the primary issuer, **to the minute** — a CPI print at
+  12:30Z that we recorded as 13:30Z is worse than having no calendar at all
+- the gate **fail-closes** on a stale/missing/uncertain cache, verifiably
+- the whole thing works with no API key
+
+**Kill condition.** If we cannot get corroborated event times reliably enough to
+trust a gate, then the honest options are: (a) buy a calendar feed and break the
+no-keys constraint, or (b) do not trade around high-impact events *at all* — a
+blanket time-of-day blackout, which is cruder and safer. **What we do not do is
+trade through CPI on an uncorroborated LLM reading of a webpage.**
+
+The asymmetry that decides this: a false positive costs us one missed trade. A
+false negative means being long gold into a print we didn't know about. Those costs
+are not comparable.
+
+## S0.6 — Keyless data reach (`risk:invalidates-design`)
+
+**Assumption.** Everything the loop needs — macro, cross-asset, positioning — is
+reachable with **no API key**, from declarative fetch specs.
+
+**Already verified** (2026-07-13, by direct curl):
+
+```
+FRED    https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFII10,DTWEXBGS
+        → real yields, broad dollar, curve. Multi-series. Keyless. WORKS.
+Yahoo   https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=5d&interval=1d
+        → any ticker: AAPL, ^VIX, DX-Y.NYB. Cross-asset OHLC. Keyless. WORKS.
+Stooq   → DEAD. Returns a JavaScript proof-of-work anti-bot challenge, with a
+          200 status. A live demonstration of why every procedure needs a
+          validator: without one, that JS blob gets "parsed" into nonsense and
+          fed to the model.
+```
+
+**Still to test.**
+- CFTC COT positioning, keyless
+- whether the causal graph's episode studies can actually run on Yahoo history
+  (enough years, adequate quality) — this is what lets an edge earn its evidence
+  **without any trades**, so it matters
+- rate limits under a realistic daily research load
+
+**Passes if** an edge like *"risk-off → gold, inverts under dollar-funding stress"*
+can be evidenced from keyless data alone, across 20 years.
+
+**Kill condition.** If cross-asset history isn't reachable keyless, the causal graph
+cannot validate its edges against market data — and that is the property that lets it
+learn fast while beliefs learn slowly. Losing it collapses the two-speed design.
 
 ## Acceptance for the phase
 
 Every spike closed with **evidence in the closing comment** — the command and its
-output, or the row that appeared. Each of S0.1–S0.5 has either passed, or failed
+output, or the row that appeared. Each of S0.1–S0.6 has either passed, or failed
 with a written decision about what changes as a result.
 
 ## Refs

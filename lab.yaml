@@ -36,7 +36,6 @@ instruments:
     timeframes: [1h, 15m]             # charts + bars handed to the model
     bars: 200                         # per timeframe
     max_lots: 0.10                    # hard per-instrument cap
-    sources: [calendar, fred, reddit] # which harvesters run for this instrument
 
 # ---------------------------------------------------------------------------
 # The agent. Three separate sessions, three separate prompts, three separate
@@ -204,41 +203,65 @@ journal:
 # A missing source is recorded as MISSING, never as a neutral reading, or every
 # belief conditioned on it is quietly poisoned.
 # ---------------------------------------------------------------------------
+# NO API KEYS. Anywhere. The only credential in this system is your Claude
+# subscription (claude -p) and the broker login that already lives in the MT5
+# gateway. These seeds are all keyless public endpoints, verified working.
 source_seeds:
-  - kind: calendar                    # the only source that GATES. Fail-closed:
-    provider: ${CALENDAR_PROVIDER}    # if the calendar is unreachable, the loop
-    high_impact_only: true            # refuses to trade rather than trade blind
-                                      # through CPI. Pinned by spike S0.5.
+  - id: fred-macro                    # keyless: the graph CSV endpoint needs no key
+    url: https://fred.stlouisfed.org/graph/fredgraph.csv
+    series: [DFII10, DTWEXBGS, T10Y2Y]   # 10y real yield, broad dollar, curve
 
-  - kind: fred
-    api_key: ${FRED_API_KEY}
-    series: [DFII10, DTWEXBGS, T10Y2Y]   # 10y real yield, dollar index, curve
-    refresh: daily
+  - id: yahoo-cross-asset             # keyless: any ticker. AAPL, ^VIX, DX-Y.NYB.
+    url: https://query1.finance.yahoo.com/v8/finance/chart/{ticker}
+    # This is what the causal graph's episode studies run on — cross-asset OHLC
+    # going back years, which is how an edge earns its evidence WITHOUT trades.
 
-  - kind: reddit
-    client_id: ${REDDIT_CLIENT_ID}
-    client_secret: ${REDDIT_CLIENT_SECRET}
-    subreddits: [Gold, commodities]
-    max_posts: 50
-    digest_max_tokens: 200            # a bounded digest, never a raw dump
-    # Sentiment is logged as a FACTOR and gates nothing. Whether it relates to
-    # realized R at all is a question the belief loop ANSWERS, not one we assume.
-    # If it doesn't, it earns an INVALIDATED belief and we stop paying for it.
-
-  # X is not seeded: its free tier is write-only, reading requires the paid plan.
-  # A cost decision, not a technical one. Deferred, not forgotten.
+# Everything past these seeds, the agent discovers itself. See docs/SELF-ADVANCING.md.
+#   memory/procedures/  — declarative fetch specs. NEVER shell: a scraped page can
+#                         carry prompt injection, and executing a model-authored
+#                         string is remote code execution. Data, run by an HTTP
+#                         client, with a mandatory validator.
+#   memory/sources/     — the living registry, with a decaying usefulness score.
+# Harvest reads the REGISTRY, not this list.
 
 research:
-  # RESEARCH is open-ended, not unbounded. It may go anywhere; it must come back
-  # with durable artifacts (a graph node, an edge, a source card, a procedure) —
-  # never a paragraph of prose that gets read once and lost. An unbounded web-search
-  # agent with no output contract produces beautiful narratives and no knowledge,
-  # and recency-biased narratives are exactly how LLMs get confidently wrong about
-  # markets.
-  web_search: true
+  # Open-ended, not unbounded. It may go anywhere; it must come back with durable
+  # artifacts (a graph node, an edge, a source card, a procedure) — never prose that
+  # gets read once and lost. An unbounded web-search agent with no output contract
+  # produces beautiful narratives and no knowledge, and recency-biased narratives are
+  # exactly how LLMs get confidently wrong about markets.
+  web_search: true                    # claude -p's own tools. No key.
   respect_robots_txt: true            # non-negotiable
   rate_limit_rps: 1
-  max_new_sources_per_run: 10         # so the registry grows deliberately, not in a burst
+  max_new_sources_per_run: 10         # the registry grows deliberately, not in a burst
+  new_domain_policy: review_queue     # a new domain is not auto-trusted. If this queue
+                                      # is never read, the security boundary in
+                                      # SELF-ADVANCING.md §1 is decorative — say so.
+
+# ---------------------------------------------------------------------------
+# The calendar. The ONLY source that gates, which makes it the only one where
+# being wrong is a money problem rather than a data problem.
+#
+# The gate NEVER calls an LLM. RESEARCH populates a cache file with provenance;
+# the gate reads the file and does arithmetic on it. See docs/RUNTIME.md §4.
+#
+# The model may POPULATE a gate. It may never BE one.
+# ---------------------------------------------------------------------------
+calendar:
+  cache: memory/calendar/upcoming.yaml
+  refresh: "0 6 * * *"                # RESEARCH refreshes it daily
+  max_age_hours: 30                   # older than this = STALE = REFUSE TO TRADE
+  min_sources: 2                      # one source agreeing with itself is not
+                                      # corroboration. Two independent, or the event
+                                      # is not `confirmed`.
+  fail_closed: true                   # stale, missing, or uncertain => NO TRADE.
+                                      #
+                                      # The asymmetry is the entire point: a false
+                                      # positive costs us one missed trade. A false
+                                      # negative means being long gold into a CPI
+                                      # print we didn't know about. Those are not
+                                      # comparable, so the gate is deliberately
+                                      # trigger-happy. Never set this to false.
 
 # ---------------------------------------------------------------------------
 # Phase 6. The experiment that could tell us the memory is worthless.
