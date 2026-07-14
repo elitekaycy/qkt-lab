@@ -102,7 +102,7 @@ CREATE INDEX IF NOT EXISTS outcome_closed_at_idx ON outcome (closed_at);
 CREATE OR REPLACE VIEW episode AS
 SELECT
     d.*,
-    o.closed_at, o.net_pnl, o.gross_pnl, o.commission, o.swap,
+    o.closed_at, o.close_price, o.net_pnl, o.gross_pnl, o.commission, o.swap,
     o.r_multiple, o.duration_s, o.lots_closed
 FROM decision d
 JOIN outcome o USING (ticket)
