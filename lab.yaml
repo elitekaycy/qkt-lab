@@ -275,7 +275,7 @@ calendar:
 # Phase 6. The experiment that could tell us the memory is worthless.
 # ---------------------------------------------------------------------------
 experiment:
-  ab_enabled: false
+  ab_enabled: true
   arms: [beliefs, control]            # identical gates and sizing; control gets
                                       # the playbook but no beliefs.
   assignment: hash                    # deterministic on (ts, symbol)
