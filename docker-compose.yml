@@ -95,7 +95,7 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - ./state/charts:/srv/charts:ro
-    command: caddy file-server --root /srv --listen :8080
+    command: caddy file-server --browse --root /srv --listen :8080
 
   # --- profile: journal (optional; the loop runs fully without it) -------------
 

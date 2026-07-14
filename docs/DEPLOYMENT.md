@@ -16,7 +16,7 @@ docker compose up -d
 ```
 ┌─ compose ────────────────────────────────────────────────────────────┐
 │                                                                      │
-│  mt5-gateway      elitekaycy/mt5-gateway-api:0.3.2   (published)     │
+│  mt5-gateway      elitekaycy/mt5-gateway-api:0.3.3   (published)     │
 │      ▲                                                               │
 │      │ HTTP                                                          │
 │  lab              qkt-lab:local  ← qkt CLI + claude CLI + python     │
@@ -83,14 +83,11 @@ claude setup-token          # on the host, once
 # paste into .env as CLAUDE_CODE_OAUTH_TOKEN
 ```
 
-Two open questions that **spike S0.4 must answer before anything is built on it**:
-
-- Does headless `claude -p` work *inside a container* with only that token?
-- Does it still ride the Max pool? The subagent spend cap was hit on 2026-06-15. If
-  headless is metered separately, this becomes a cost decision, not a build one.
-
-If the answer is "you need an API key", say so out loud — it breaks the no-keys
-property and changes what this repo can honestly claim.
+Spike S0.4 answered the two questions this rested on: headless `claude -p`
+works inside the container with only that token (or a `~/.claude` mount, which
+compose sets up and which also self-refreshes), and it rides the subscription
+pool — no API key anywhere. If either ever regresses, say so out loud: it
+breaks the no-keys property and changes what this repo can honestly claim.
 
 ### 2. Scheduling: supercronic, not `cron`
 
@@ -137,17 +134,11 @@ Deltalytix links to it.
 
 ### 4. qkt must be a *published* image, or nobody can run this
 
-qkt's own compose builds `qkt:local` **from source**. That's fine for you and fatal
-for the "clone and run" claim: qkt-lab's Dockerfile does `COPY --from=qkt:local`,
-which means anyone else has to clone qkt and build it first.
-
-Fix: publish `ghcr.io/elitekaycy/qkt:<version>`, the way mt5-gateway already publishes
-`elitekaycy/mt5-gateway-api:0.3.2`. Then the lab image pulls it and there is no
-build-from-source step in the critical path.
-
-This lands in the same bucket as [#8](../../issues/8) (both repos are public but
-unlicensed). Neither is hard; both are load-bearing for the repo being honest about
-what it offers.
+Done: the lab Dockerfile builds `FROM ghcr.io/elitekaycy/qkt:latest`, published
+the way mt5-gateway publishes `elitekaycy/mt5-gateway-api:0.3.3`. There is no
+build-from-source step in the critical path; `QKT_IMAGE` overrides the base for
+development against a local qkt build. Licensing landed with it
+([#8](../../issues/8) — qkt Apache-2.0, mt5-gateway MIT).
 
 ---
 
@@ -189,4 +180,3 @@ touches is a volume.**
 
 Runtime design: [`RUNTIME.md`](RUNTIME.md)
 Plan: [`PLAN.md`](PLAN.md)
-Blocked on: S0.4 (claude -p in a container, on the Max pool), [#8](../../issues/8)

@@ -7,22 +7,115 @@ episodes into memory that makes the next decision better.
 
 Everything is driven from one file: [`lab.yaml`](lab.yaml).
 
-> **Status: built, in demo.** All six phases are implemented and tested (130
+> **Status: running, in demo.** All six phases are implemented and tested (130
 > tests, including the false-discovery gate proven on live Postgres and the
-> keyless endpoints hit for real). Nothing here has traded real money — `mode:
-> live` refuses to start until the Phase 6 A/B has run and passed.
+> keyless endpoints hit for real), and the loop has been live against a demo
+> account since 2026-07-14 — the Phase 6 A/B is accumulating its pre-registered
+> sample. Nothing here has traded real money — `mode: live` refuses to start
+> until that A/B has run and passed.
 
-## Run it
+## Getting started
 
+### What you need
+
+- **Docker with Compose v2** on a linux/amd64 host (the MT5 gateway runs the
+  Windows MT5 terminal under Wine). ~5 GB disk for images. Nothing installs on
+  the host itself.
+- **A Claude subscription** (Pro or Max) — the analyst is `claude -p`. This is
+  the only credential in the system that isn't the broker login. It is not an
+  API key.
+- **An MT5 demo account** — free, takes two minutes at any MT5 broker (Exness
+  demo used here). You need three strings: login, password, server name. The
+  `EXNESS` broker label in the configs is just a name; `MT5_SERVER` decides the
+  actual venue.
+
+### First run
+
+```bash
+git clone https://github.com/elitekaycy/qkt-lab && cd qkt-lab
+cp .env.example .env
 ```
-cp .env.example .env          # CLAUDE_CODE_OAUTH_TOKEN + db passwords
-docker compose up -d                     # gateway, db, scheduler, charts
-docker compose --profile journal up -d   # + the Deltalytix UI on localhost:3000
-touch KILL                               # emergency stop
+
+Fill in `.env` (nothing else is edited on a first run):
+
+| var | what to put there |
+|---|---|
+| `MT5_LOGIN` / `MT5_PASSWORD` / `MT5_SERVER` | your demo account — the gateway logs in headless on boot |
+| `MT5_API_KEY` | any string you invent; it locks the gateway's REST port |
+| `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` on the host, paste the result — or leave it empty if the host is already logged in to `claude` (compose mounts `~/.claude` into the scheduler) |
+
+```bash
+docker compose up -d          # gateway, postgres, schema, scheduler, charts
+touch KILL                    # emergency stop, any time; rm KILL to resume
 ```
 
-The scheduler generates its crontab from `lab.yaml` (`bin/gen-crontab`) — editing
-a schedule there and restarting the container is the whole deployment story.
+That's the whole install. The scheduler generates its crontab from `lab.yaml`
+(`bin/gen-crontab`) — trade hourly on the 1h close, join outcomes every 15 min,
+distill nightly, research daily. Editing a schedule in `lab.yaml` and
+`docker compose restart scheduler` is the whole deployment story.
+
+### Confirm it works
+
+| check | command | expect |
+|---|---|---|
+| services up | `docker compose ps` | `lab-mt5-gateway` and `lab-postgres` show `(healthy)` |
+| broker login | `docker compose logs mt5-gateway \| tail` | a successful login line, no auth errors |
+| a cycle, right now | `docker exec lab-scheduler python3 bin/trade EXNESS:XAUUSD` | ends in `TRADE`, `NO_TRADE`, or `GATED` — all three are success; the decision is the product |
+| it was journaled | `docker exec lab-postgres psql -U lab -d lab -c "SELECT ts, action, arm, conviction, thesis FROM decision ORDER BY ts DESC LIMIT 5;"` | your cycle as a row, thesis included |
+| kill switch | `touch KILL`, run a cycle | `GATED` with `kill_switch` in `gate_rejects` |
+
+`NO_TRADE` on your first cycle is the common case and the honest one — most
+hours have no edge, and the system journals that with the same rigor as a trade.
+
+### Watching it think
+
+Every decision is written down before anything else happens, so the audit trail
+*is* the primary interface:
+
+- **What it decided and why** — the `decision` table holds the thesis, the full
+  `rationale_md`, conviction, which map nodes and beliefs it used, and what
+  gates rejected. `docker exec -it lab-postgres psql -U lab -d lab` and look
+  around.
+- **What actually happened** — the `episode` view joins each trade to the
+  broker's realized outcome: `SELECT ts, side, net_pnl, r_multiple, thesis FROM
+  episode;`. Broker truth, not our optimism.
+- **What it looked at** — the exact charts handed to the model are served at
+  `http://localhost:8080/charts/`.
+- **Every cycle's stdout** — `docker compose logs -f scheduler`.
+- **What it learned** — `memory/` is git-tracked and bind-mounted; the agent's
+  research lands as real commits. `git log --oneline -- memory/` is the history
+  of it changing its mind.
+
+### The journal UI (optional)
+
+For a visual journal — equity curve, calendar, per-trade cards with charts and
+rationale — the lab exports to a self-hosted [Deltalytix](https://github.com/hugodemenez/deltalytix).
+It's CC BY-NC (not OSI), so no prebuilt image ships; you build it yourself:
+
+```bash
+git clone https://github.com/hugodemenez/deltalytix ../deltalytix
+docker build ../deltalytix -f ../deltalytix/Dockerfile.bun -t deltalytix:local \
+  --build-arg NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true \
+  --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+docker compose --profile journal up -d
+
+# one-time: apply Deltalytix's schema to its database
+docker run --rm --network qkt-lab_default -v $PWD/../deltalytix:/w -w /w \
+  -e DATABASE_URL=postgresql://deltalytix:deltalytix@deltalytix-db:5432/deltalytix \
+  -e DIRECT_URL=postgresql://deltalytix:deltalytix@deltalytix-db:5432/deltalytix \
+  oven/bun:1 sh -c 'bun install --frozen-lockfile && bunx prisma db push'
+```
+
+Open `http://localhost:3000` — no login; the auth bypass is baked into the
+image, which is exactly why compose binds it to `127.0.0.1` only. Never expose
+this port. Closed trades appear within one join interval (15 min); the UI
+caches reads for an hour, so `docker compose restart deltalytix` forces a
+refresh.
+
+Skipping the UI? Set `journal.deltalytix.enabled: false` in `lab.yaml`, or the
+export step will log an error after every join. The loop itself never depends
+on it.
 
 ---
 
