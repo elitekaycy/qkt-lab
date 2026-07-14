@@ -19,7 +19,7 @@ from lab.procedures import ProcedureError, Runner, _validate, load_spec
 
 ROOT = Path(__file__).resolve().parents[1]
 NOW = datetime(2026, 7, 13, 12, 0, tzinfo=UTC)
-DOMAINS = {"fred.stlouisfed.org", "query1.finance.yahoo.com"}
+DOMAINS = {"fred.stlouisfed.org", "query1.finance.yahoo.com", "publicreporting.cftc.gov"}
 
 
 def write_proc(tmp_path, name, body):
@@ -212,3 +212,15 @@ def test_yahoo_cross_asset_live():
     assert got.ok, got.reason
     meta = got.rows[0]["meta"]
     assert meta["symbol"] == "AAPL"
+
+
+@pytest.mark.live
+def test_cftc_cot_gold_live():
+    """COT positioning, keyless Socrata endpoint (spike S0.6)."""
+    runner = Runner(ROOT / "memory" / "procedures", DOMAINS)
+    got = runner.run("cftc-cot-gold", now=datetime.now(UTC))
+    assert got.ok, got.reason
+    net = int(got.rows[0]["noncomm_positions_long_all"]) - int(
+        got.rows[0]["noncomm_positions_short_all"]
+    )
+    assert abs(net) < 1_000_000

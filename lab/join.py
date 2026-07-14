@@ -101,7 +101,8 @@ def r_multiple(net_pnl: float, risk_at_entry: float | None) -> float | None:
     """
     if not risk_at_entry or risk_at_entry <= 0:
         return None
-    return net_pnl / risk_at_entry
+    # risk_at_entry arrives as Decimal from postgres NUMERIC; float/Decimal raises.
+    return net_pnl / float(risk_at_entry)
 
 
 def run(cfg: Config, qkt: Qkt, store: Store) -> dict[str, Any]:

@@ -183,8 +183,8 @@ store:
 # ---------------------------------------------------------------------------
 journal:
   deltalytix:
-    enabled: false                    # flip on once the Deltalytix image is built
-                                      # and `--profile journal` is up (issue #11);
+    enabled: true                     # requires the Deltalytix image built and
+                                      # `--profile journal` up (issue #11);
                                       # enabled without it, every export cron errors.
     dsn: ${DELTALYTIX_DATABASE_URL}
     user_id: local-dashboard-user
