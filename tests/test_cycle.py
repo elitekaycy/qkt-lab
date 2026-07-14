@@ -246,4 +246,11 @@ def test_arm_assignment_is_deterministic(cfg):
     a2 = cycle.assign_arm(c, "ICM:XAUUSD", t)
     assert a1 == a2  # cannot be re-rolled
     # and with the experiment off, always beliefs
-    assert cycle.assign_arm(cfg, "ICM:XAUUSD", t) == "beliefs"
+    off = cfg_with(
+        cfg,
+        raw={
+            **copy.deepcopy(cfg.raw),
+            "experiment": {"ab_enabled": False, "arms": ["beliefs", "control"]},
+        },
+    )
+    assert cycle.assign_arm(off, "ICM:XAUUSD", t) == "beliefs"
