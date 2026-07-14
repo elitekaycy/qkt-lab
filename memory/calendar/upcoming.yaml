@@ -1,7 +1,11 @@
-# Written by RESEARCH 2026-07-13. Window: 2026-07-13 .. 2026-07-20 (+ FOMC anchor).
+# Written by RESEARCH 2026-07-14. Window: 2026-07-14 .. 2026-07-21 (+ FOMC anchor).
 # Rule: two independent source URLs or the event is marked uncertain. Uncertain
 # high-impact events gate HARDER, not softer — see lab/calendar.py.
-fetched_at: "2026-07-13T21:50:00Z"
+#
+# Jul 18-21 is data-quiet by construction: FOMC blackout starts Jul 18 (no Fed
+# speakers) and no tier-1 US release was found for Mon Jul 20 / Tue Jul 21.
+# Quiet is a finding, not an omission.
+fetched_at: "2026-07-14T06:07:46Z"
 events:
   - name: US CPI (June 2026)
     at: "2026-07-14T12:30:00Z"
@@ -23,6 +27,7 @@ events:
     confidence: confirmed
     sources:
       - https://financialservices.house.gov/news/documentsingle.aspx?DocumentID=411173
+      - https://www.federalreserve.gov/newsevents/2026-july.htm
       - https://www.investing.com/news/economy-news/fed-chair-warsh-to-testify-before-lawmakers-on-july-14-4753916
     note: >
       10:00 ET, 90 minutes AFTER the CPI print — Warsh's DEBUT semiannual
@@ -36,13 +41,14 @@ events:
     confidence: uncertain
     sources:
       - https://www.investing.com/news/economy-news/chinas-gdp-growth-set-to-slow-raising-expectations-for-more-stimulus-4787575
+      - https://www.lundgreensinvestorinsights.com/next-week-in-china-13-17-july-2026/
       - https://www.stats.gov.cn/english/PressRelease/
     note: >
-      Only one source states the time explicitly (Reuters: 0200 GMT); NBS
-      convention of 10:00 Beijing corroborates but was not independently
-      verified this run — hence uncertain. Asia-session gold liquidity is thin
-      at this hour. Growth miss feeds gold two ways with opposite signs
-      (stimulus hopes vs consumer demand).
+      Still uncertain after two runs: only Reuters states the time explicitly
+      (0200 GMT); Lundgreen's corroborates the Jul 15 DATE for GDP + IP + retail
+      sales but gives no time. NBS convention of 10:00 Beijing matches. Asia
+      liquidity thin at this hour. Growth miss feeds gold two ways with opposite
+      signs (stimulus hopes vs consumer demand). Consensus: 4.5% y/y vs 5.0% Q1.
 
   - name: US PPI (June 2026)
     at: "2026-07-15T12:30:00Z"
@@ -69,17 +75,18 @@ events:
       still drop any time during Q&A.
 
   - name: Fed Beige Book
-    at: "2026-07-15T17:00:00Z"
+    at: "2026-07-15T18:00:00Z"
     impact: medium
     affects: [XAUUSD, USD]
-    confidence: uncertain
+    confidence: confirmed
     sources:
       - https://www.federalreserve.gov/newsevents/2026-july.htm
-      - https://www.philadelphiafed.org/calendar-of-events?release=beige-book
+      - https://www.investing.com/economic-calendar/beige-book-10
     note: >
-      Sources CONFLICT on the time: Fed calendar page read as 1:00 p.m. ET,
-      another listing said 4:15 p.m. ET, historical convention is 2:00 p.m. ET.
-      Timed here at the earliest claim so any caution window opens early.
+      2:00 p.m. ET, read directly off the Fed's July calendar page 2026-07-14.
+      Resolves the prior run's conflict (1pm vs 4:15pm claims): the 2pm ET
+      convention is what the Fed's own page states. Prior cache had 17:00Z —
+      corrected to 18:00Z.
 
   - name: US retail sales (June 2026) + weekly jobless claims + Philly Fed
     at: "2026-07-16T12:30:00Z"
@@ -93,6 +100,29 @@ events:
       8:30 ET triple print. Retail sales is the growth read the rates market
       trades; claims feed the same repricing.
 
+  - name: Fed Governor Cook speech, "The Economic Outlook"
+    at: "2026-07-16T17:00:00Z"
+    impact: medium
+    affects: [XAUUSD, USD]
+    confidence: confirmed
+    sources:
+      - https://www.federalreserve.gov/newsevents/2026-july.htm
+    note: >
+      1:00 p.m. ET, Washington D.C. Single source but it is the Fed's own
+      calendar. Last scheduled Fed commentary alongside Jefferson before the
+      Jul 18 blackout — final chance for a rate-path steer after CPI/PPI/retail.
+
+  - name: Fed Vice Chair Jefferson speech, "Navigating Economic Shocks"
+    at: "2026-07-16T23:00:00Z"
+    impact: medium
+    affects: [XAUUSD, USD]
+    confidence: confirmed
+    sources:
+      - https://www.federalreserve.gov/newsevents/2026-july.htm
+    note: >
+      7:00 p.m. ET at Stanford — lands in the Asia session open, where gold
+      liquidity is thin. Single source but it is the Fed's own calendar.
+
   - name: University of Michigan consumer sentiment, July prelim (+ inflation expectations)
     at: "2026-07-17T14:00:00Z"
     impact: medium
@@ -100,10 +130,12 @@ events:
     confidence: uncertain
     sources:
       - https://investrade.com/weekly-event-calendar-07-13-2026-07-17-2026/
+      - https://www.advisorperspectives.com/dshort/updates/2026/06/26/consumer-sentiment-rises-on-cheaper-gas-but-inflation-worries-persist
     note: >
-      10:00 ET by convention; only one source lists it explicitly this run.
-      The 1y/5y inflation-expectation lines matter more for gold than the
-      headline sentiment number.
+      Jul 17 DATE now corroborated by two sources (investrade; dshort "next
+      update July 17"). The 10:00 ET TIME is still single-source + convention —
+      hence still uncertain. The 1y/5y inflation-expectation lines matter more
+      for gold than the headline sentiment number.
 
   - name: FOMC communications blackout begins (for Jul 28-29 meeting)
     at: "2026-07-18T00:00:00Z"
@@ -114,7 +146,10 @@ events:
       - https://www.federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf
       - https://www.stlouisfed.org/about-us/resources/blackout-periods
     note: >
-      Blackout Jul 18-30: no Fed speakers until the meeting. Rate-path
+      Blackout Jul 18-30: no Fed speakers until the meeting. Second-Saturday
+      rule: meeting starts Tue Jul 28, second Saturday before is Jul 18. (One
+      aggregator summary claimed Jul 12 — contradicted by the Fed-scheduled
+      Warsh/Cook/Jefferson appearances Jul 14-16; Jul 18 stands.) Rate-path
       repricing after this date comes from data and positioning only.
 
   - name: FOMC rate decision + Warsh press conference
@@ -127,4 +162,6 @@ events:
       - https://www.federalreserve.gov/newsevents/2026-july.htm
     note: >
       Beyond this refresh's 7-day window but anchored now because it is
-      rock-solid: statement 2:00 p.m. ET, press conference 2:30 p.m. ET.
+      rock-solid: statement 2:00 p.m. ET, press conference 2:30 p.m. ET. NO
+      Summary of Economic Projections at this meeting — statement wording and
+      presser carry the whole signal.
