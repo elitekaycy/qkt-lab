@@ -20,3 +20,8 @@ Track record:
 - 2026-07-13: times for CPI (Jul 14 8:30 ET), PPI (Jul 15 8:30 ET), retail
   sales (Jul 16 8:30 ET) all matched the BLS schedule and Census release
   schedule independently. Missed both Warsh testimonies and the Beige Book.
+- 2026-07-16: next week's page (weekly-event-calendar-07-20-2026-07-24-2026)
+  returned 404 on Thursday morning — pages appear to publish late in the prior
+  week. Cannot be the corroborating source for a refresh that runs mid-week
+  and reaches into the following week; Census list-view calendar filled the
+  gap this run.
