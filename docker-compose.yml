@@ -49,11 +49,14 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./:/lab
+      - ./:/lab:ro
     environment: &lab-env
       LAB_DATABASE_URL: postgresql://lab:${LAB_DB_PASSWORD:-lab}@postgres:5432/lab
       DELTALYTIX_DATABASE_URL: postgresql://deltalytix:${DELTALYTIX_DB_PASSWORD:-deltalytix}@deltalytix-db:5432/deltalytix
-      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      LAB_CHARTS_PORT: ${LAB_CHARTS_PORT:-8080}
+      # Codex's nested bubblewrap cannot create user namespaces in a default
+      # Docker container. Docker is the outer sandbox; see scheduler mounts.
+      CODEX_EXTERNAL_SANDBOX: "1"
       QKT_BROKER_EXNESS_API_KEY: ${MT5_API_KEY}
       QKT_BROKER_EXNESS_EXPECTED_ACCOUNT_LOGIN: ${MT5_LOGIN}
       QKT_BROKER_EXNESS_EXPECTED_ACCOUNT_SERVER: ${MT5_SERVER}
@@ -73,11 +76,15 @@ services:
       migrate:
         condition: service_completed_successfully
     volumes:
-      - ./:/lab
-      # Claude subscription auth: mount the host's credentials so `claude -p`
-      # rides the existing login and refreshes tokens itself. Alternative:
-      # leave this out and set CLAUDE_CODE_OAUTH_TOKEN (claude setup-token).
-      - ~/.claude:/root/.claude
+      # The outer sandbox for Codex research. Source/config are immutable; only
+      # durable memory, generated state, and the research commit are writable.
+      - ./:/lab:ro
+      - ./memory:/lab/memory
+      - ./state:/lab/state
+      - ./.git:/lab/.git
+      # Codex headless auth: reuse the host's ChatGPT login. Mount only the auth
+      # file, not all of ~/.codex (which may contain unrelated MCP credentials).
+      - ~/.codex/auth.json:/root/.codex/auth.json
     environment: *lab-env
     # The crontab is GENERATED from lab.yaml so there is one source of truth
     # for when things run. supercronic logs to stdout: `docker compose logs scheduler`.
@@ -92,7 +99,7 @@ services:
     container_name: lab-charts
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${LAB_CHARTS_PORT:-8080}:8080"
     volumes:
       - ./state/charts:/srv/charts:ro
     command: caddy file-server --browse --root /srv --listen :8080

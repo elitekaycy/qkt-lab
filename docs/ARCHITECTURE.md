@@ -39,7 +39,7 @@ order. Each is prevented from marking its own homework.
 
 ## RESEARCH — the analyst's own time
 
-Two modes, same session type: open-ended Claude with web search, the full memory,
+Two modes, same session type: open-ended Codex with web search, the full memory,
 and a hard output contract — **come back with durable artifacts, not prose.**
 
 **Scheduled (daily, ~30 min budget).** Standing brief: keep the map current, keep
@@ -105,7 +105,7 @@ for itself:
 
 ### 3. Propose
 
-`claude -p` with the packet plus two chart PNGs. Strict JSON:
+`codex exec` with the packet plus two chart PNGs. Strict JSON:
 
 ```json
 {"action":"TRADE","side":"BUY","sl":2606.20,"tp":2621.40,"conviction":0.6,

@@ -2,11 +2,10 @@
 
 Design → architecture → what actually runs on the box. Plus the document map.
 
-**Constraint that shapes everything here: no third-party API keys.** The only
-credential in the system is your Claude subscription (`claude -p`), and the broker
-login that already lives in the MT5 gateway. No FRED key, no Finnhub key, no paid
-calendar, no X plan. Fully autonomous, research-driven, and reproducible by anyone
-who clones the repo.
+**Constraint that shapes everything here: no data or model API keys.** The
+credentials are a ChatGPT-managed Codex login and the broker login used by the
+MT5 gateway. No FRED key, no Finnhub key, no paid calendar, no X plan. Fully
+autonomous, research-driven, and reproducible by anyone who clones the repo.
 
 That is achievable. It also creates exactly one hard problem, and this document is
 honest about it (§4).
@@ -20,15 +19,16 @@ Four processes. Cron drives them. Nothing is a daemon.
 ```
 crontab
  │
- ├─ 0 6 * * *      bin/research            claude -p, web search, ~30min budget
- ├─ 0 * * * *      bin/trade ICM:XAUUSD    claude -p, ~1min
+ ├─ 0 6 * * *      bin/research            codex exec, web search, ~30min budget
+ ├─ 0 * * * *      bin/trade ICM:XAUUSD    codex exec, ~1min
  ├─ */15 * * * *   bin/join                pure python, no LLM
- └─ 0 22 * * *     bin/distill             claude -p + python stats
+ └─ 0 22 * * *     bin/distill             codex exec + python stats
                    bin/research --anomaly  event-triggered, spawned by the others
 ```
 
 Each `bin/*` is a thin python entrypoint. The LLM work is a **subprocess call to
-`claude -p`** with a prompt, a context packet, and (for the trader) chart images.
+`codex exec`** with developer instructions, a context packet, and (for the
+trader) chart images.
 There is no server, no queue, no framework. If a process dies, the next cron tick
 starts a fresh one and the state is on disk.
 
@@ -52,14 +52,19 @@ The permission table *is* the architecture. Nothing marks its own homework.
 The only code that can place an order is deterministic python that never talks to a
 model. The model's output reaches it as a validated dataclass, after gating.
 
+In Docker, source and configuration are mounted read-only. The scheduler
+over-mounts only `memory/`, `state/`, and `.git` as writable. Proposal roles have
+no tools; research has live web and file editing but no shell, apps, subagents, or
+broker credentials.
+
 ## 3. How data gets in — with no API keys
 
 Two channels, and they do different jobs.
 
-**Channel A — `claude -p`'s own web tools (RESEARCH only).**
-Web search and page fetch are built into the Claude Code runtime. No key, no
-account beyond your subscription. This is how the agent *discovers* — reads a WGC
-quarterly, finds a Fed speech transcript, works out what moved gold yesterday.
+**Channel A — Codex live web search (RESEARCH only).**
+Web search is built into the Codex runtime. This is how the agent *discovers* —
+reads a WGC quarterly, finds a Fed speech transcript, works out what moved gold
+yesterday.
 
 Open-ended, and slow, and expensive. It runs on the research clock, not the trade
 clock. An agent doing twenty web searches while a bar closes is an agent that
@@ -95,7 +100,7 @@ otherwise would be how someone gets hurt.
 **The resolution: the gate never calls an LLM. It reads a file.**
 
 ```
-bin/research  ──(daily, claude -p, web)──►  memory/calendar/upcoming.yaml
+bin/research  ──(daily, codex exec, web)──►  memory/calendar/upcoming.yaml
                                                      │
                                                      ▼
 bin/trade ──► gates.py ──► reads upcoming.yaml ──► blackout? ──► refuse
@@ -176,7 +181,7 @@ and when did it start believing it" is the first question.
 
 ```
 06:00  bin/research
-       claude -p --web
+       codex exec -c web_search="live"
        → notices gold held firm through a real-yield backup
        → executes procedure fred-real-yield-10y (no LLM, no key)
        → recomputes the rolling correlation over 20y
@@ -189,7 +194,7 @@ and when did it start believing it" is the first question.
        execute procedures: fred, yahoo-vix                (keyless, validated)
        retrieve: playbook + LIVE graph nodes + ACTIVE beliefs + procedure index
        render charts → 1h.png, 15m.png
-       claude -p (no web) + packet + images → PROPOSAL json
+       codex exec (no tools/web) + packet + images → PROPOSAL json
        gates.py  → pass                                   (arithmetic, no LLM)
        sizing.py → 0.13 lots                              (arithmetic, no LLM)
        qkt bot buy ... --json → ticket 88412
@@ -203,16 +208,16 @@ and when did it start believing it" is the first question.
        no anomaly → no trigger
 
 22:00  bin/distill
-       claude -p (no web) → belief proposals
+       codex exec (no tools/web) → belief proposals
        beliefs.py → compile predicate to SQL, score over ALL matching trades,
                     apply family-wide BH correction, set status
        git commit memory/beliefs/
 ```
 
-## 7. Cost
+## 7. Usage
 
-The only spend is Claude. Everything else is keyless public data and your existing
-broker.
+Model usage is charged against the authenticated Codex plan. Everything else is
+keyless public data and your existing broker.
 
 | clock | calls/day | shape |
 |---|---|---|
@@ -227,9 +232,7 @@ working.** If tokens-per-cycle isn't falling as the procedure and graph counts r
 something in the retrieval discipline has broken, and we should learn that from a
 plotted metric rather than a surprise bill.
 
-Open risk: `claude -p` on the Max pool hit a subagent spend cap on 2026-06-15.
-Spike S0.4 confirms whether the headless path is affected before anything is built
-on it.
+Automated sessions disable subagents to keep usage and behavior predictable.
 
 ---
 

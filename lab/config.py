@@ -123,6 +123,8 @@ class Config:
 
     instruments: list[Instrument]
     as_prefix: str
+    agent_provider: str
+    agent_bin: str
     model: str
 
     risk: Risk
@@ -205,7 +207,9 @@ def load(path: str | Path = "lab.yaml") -> Config:
         qkt_retries=int(q.get("retries", 2)),
         instruments=instruments,
         as_prefix=agent.get("as_prefix", "lab"),
-        model=agent.get("model", "claude-fable-5"),
+        agent_provider=agent.get("provider", "codex"),
+        agent_bin=agent.get("bin", "codex"),
+        model=agent.get("model", "gpt-5.6-sol"),
         risk=Risk(
             risk_per_trade_pct=float(risk["risk_per_trade_pct"]),
             portfolio_heat_pct=float(risk.get("portfolio_heat_pct", 2.0)),
@@ -252,6 +256,12 @@ def _validate(cfg: Config) -> None:
     """Fail at startup, not at the moment an order is placed."""
     if cfg.mode not in ("demo", "live"):
         raise ConfigError(f"lab.mode must be demo|live, got {cfg.mode!r}")
+    if cfg.agent_provider not in ("codex", "claude"):
+        raise ConfigError(f"agent.provider must be codex|claude, got {cfg.agent_provider!r}")
+    if not cfg.agent_bin.strip():
+        raise ConfigError("agent.bin must not be empty")
+    if not cfg.model.strip():
+        raise ConfigError("agent.model must not be empty")
 
     # `live` is gated on the phase-6 A/B. Refusing here is the gate.
     if cfg.mode == "live" and not cfg.raw.get("experiment", {}).get("ab_passed"):

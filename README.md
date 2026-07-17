@@ -7,8 +7,8 @@ episodes into memory that makes the next decision better.
 
 Everything is driven from one file: [`lab.yaml`](lab.yaml).
 
-> **Status: running, in demo.** All six phases are implemented and tested (130
-> tests, including the false-discovery gate proven on live Postgres and the
+> **Status: running, in demo.** All six phases are implemented and tested,
+> including the false-discovery gate proven on live Postgres and the
 > keyless endpoints hit for real), and the loop has been live against a demo
 > account since 2026-07-14 — the Phase 6 A/B is accumulating its pre-registered
 > sample. Nothing here has traded real money — `mode: live` refuses to start
@@ -21,9 +21,9 @@ Everything is driven from one file: [`lab.yaml`](lab.yaml).
 - **Docker with Compose v2** on a linux/amd64 host (the MT5 gateway runs the
   Windows MT5 terminal under Wine). ~5 GB disk for images. Nothing installs on
   the host itself.
-- **A Claude subscription** (Pro or Max) — the analyst is `claude -p`. This is
-  the only credential in the system that isn't the broker login. It is not an
-  API key.
+- **Codex access through ChatGPT** — run `codex login` once on the host. The
+  scheduler runs `codex exec` headlessly and mounts only
+  `~/.codex/auth.json`; no model API key is stored in `.env`.
 - **An MT5 demo account** — free, takes two minutes at any MT5 broker (Exness
   demo used here). You need three strings: login, password, server name. The
   `EXNESS` broker label in the configs is just a name; `MT5_SERVER` decides the
@@ -42,7 +42,11 @@ Fill in `.env` (nothing else is edited on a first run):
 |---|---|
 | `MT5_LOGIN` / `MT5_PASSWORD` / `MT5_SERVER` | your demo account — the gateway logs in headless on boot |
 | `MT5_API_KEY` | any string you invent; it locks the gateway's REST port |
-| `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` on the host, paste the result — or leave it empty if the host is already logged in to `claude` (compose mounts `~/.claude` into the scheduler) |
+
+If port 8080 is already in use, set `LAB_CHARTS_PORT` in `.env`; the chart
+server and journal URLs use it automatically.
+
+Confirm `codex login status` says you are logged in before starting Compose.
 
 ```bash
 docker compose up -d          # gateway, postgres, schema, scheduler, charts
@@ -59,6 +63,7 @@ distill nightly, research daily. Editing a schedule in `lab.yaml` and
 | check | command | expect |
 |---|---|---|
 | services up | `docker compose ps` | `lab-mt5-gateway` and `lab-postgres` show `(healthy)` |
+| Codex auth | `docker exec lab-scheduler codex login status` | logged in through the mounted host credential |
 | broker login | `docker compose logs mt5-gateway \| tail` | a successful login line, no auth errors |
 | a cycle, right now | `docker exec lab-scheduler python3 bin/trade EXNESS:XAUUSD` | ends in `TRADE`, `NO_TRADE`, or `GATED` — all three are success; the decision is the product |
 | it was journaled | `docker exec lab-postgres psql -U lab -d lab -c "SELECT ts, action, arm, conviction, thesis FROM decision ORDER BY ts DESC LIMIT 5;"` | your cycle as a row, thesis included |
@@ -281,11 +286,11 @@ about.
 
 ---
 
-## No API keys
+## No data or model API keys
 
-The only credential in the system is your **Claude subscription** (`claude -p`) and
-the broker login that already lives in the MT5 gateway. No FRED key, no Finnhub, no
-paid calendar, no X plan.
+The credentials are your **ChatGPT-managed Codex login** and the broker login
+used by the MT5 gateway. No OpenAI API key, FRED key, Finnhub key, paid calendar,
+or X plan is required for the default local deployment.
 
 All market and macro data comes from keyless public endpoints, executed from
 declarative fetch specs **the agent writes itself**:

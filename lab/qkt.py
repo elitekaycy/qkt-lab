@@ -30,6 +30,29 @@ class QktUnavailable(QktError):
     """Transient: the gateway was unreachable. Retryable."""
 
 
+def _parse_json_output(out: str) -> Any:
+    """Parse qkt's compact JSON, tolerating JVM log lines before the payload.
+
+    qkt normally prints only JSON with ``--json``. On transport failures its
+    logger currently writes a warning and stack trace to stdout before the final
+    JSON error object. The last non-empty JSON line remains the command result.
+    """
+    try:
+        return json.loads(out)
+    except json.JSONDecodeError:
+        pass
+
+    for line in reversed(out.splitlines()):
+        candidate = line.strip()
+        if not candidate or candidate[0] not in "[{":
+            continue
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+    raise json.JSONDecodeError("no JSON payload found", out, 0)
+
+
 class Qkt:
     def __init__(
         self,
@@ -73,7 +96,7 @@ class Qkt:
                 continue
 
             try:
-                parsed = json.loads(out)
+                parsed = _parse_json_output(out)
             except json.JSONDecodeError:
                 # Not retryable — qkt said something we don't understand.
                 raise QktError(f"{verb}: unparseable output: {out[:300]}") from None

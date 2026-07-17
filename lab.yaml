@@ -48,7 +48,9 @@ instruments:
 # sets of write permissions. None of them marks its own homework.
 # ---------------------------------------------------------------------------
 agent:
-  model: claude-fable-5
+  provider: codex                    # codex | claude
+  bin: codex                         # headless: `codex exec`
+  model: gpt-5.6-sol
   as_prefix: lab                      # --as lab-xau. MUST keep the resulting
                                       # `bot-<as>-<epochms>` order comment under
                                       # 31 chars or MT5 rejects the order outright.
@@ -183,15 +185,16 @@ store:
 # ---------------------------------------------------------------------------
 journal:
   deltalytix:
-    enabled: true                     # requires the Deltalytix image built and
-                                      # `--profile journal` up (issue #11);
-                                      # enabled without it, every export cron errors.
+    enabled: false                    # opt in only after building the image and
+                                      # starting `--profile journal`; the base
+                                      # deployment must not log export errors.
     dsn: ${DELTALYTIX_DATABASE_URL}
     user_id: local-dashboard-user
     user_email: local-dashboard@deltalytix.local
     account_number: LAB-XAU
     starting_balance: 1000            # required for the equity curve to render
-    charts_base_url: http://localhost:8080/charts   # images[] must be URLs, not paths
+    charts_base_url: http://localhost:${LAB_CHARTS_PORT:-8080}/charts
+                                      # images[] must be URLs, not paths
     export_no_trades: false           # NO_TRADE/GATED rows cannot exist in its schema.
                                       # They stay in the lab store where the machine
                                       # learns from them.
@@ -211,9 +214,9 @@ journal:
 # A missing source is recorded as MISSING, never as a neutral reading, or every
 # belief conditioned on it is quietly poisoned.
 # ---------------------------------------------------------------------------
-# NO API KEYS. Anywhere. The only credential in this system is your Claude
-# subscription (claude -p) and the broker login that already lives in the MT5
-# gateway. These seeds are all keyless public endpoints, verified working.
+# No data or model API keys. The default local runtime uses the host's
+# ChatGPT-managed Codex login plus the MT5 broker login. These seeds are all
+# keyless public endpoints, verified working.
 source_seeds:
   - id: fred-macro                    # keyless: the graph CSV endpoint needs no key
     url: https://fred.stlouisfed.org/graph/fredgraph.csv
@@ -238,7 +241,7 @@ research:
   # gets read once and lost. An unbounded web-search agent with no output contract
   # produces beautiful narratives and no knowledge, and recency-biased narratives are
   # exactly how LLMs get confidently wrong about markets.
-  web_search: true                    # claude -p's own tools. No key.
+  web_search: true                    # Codex live web search. No data API key.
   respect_robots_txt: true            # non-negotiable
   rate_limit_rps: 1
   max_new_sources_per_run: 10         # the registry grows deliberately, not in a burst

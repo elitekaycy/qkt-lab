@@ -4,7 +4,8 @@ Everything runs from `docker compose`. One command up, one file to edit.
 
 ```bash
 git clone https://github.com/elitekaycy/qkt-lab && cd qkt-lab
-cp .env.example .env          # DB DSNs + your Claude token. No API keys.
+codex login                   # once on the host; verify with `codex login status`
+cp .env.example .env          # database + demo-broker settings; no model API key
 $EDITOR lab.yaml              # the one file you edit
 docker compose up -d
 ```
@@ -19,7 +20,7 @@ docker compose up -d
 │  mt5-gateway      elitekaycy/mt5-gateway-api:0.3.3   (published)     │
 │      ▲                                                               │
 │      │ HTTP                                                          │
-│  lab              qkt-lab:local  ← qkt CLI + claude CLI + python     │
+│  lab              qkt-lab:local  ← qkt CLI + Codex CLI + python      │
 │      │            one-shot container. bin/trade|join|distill|research │
 │      │                                                               │
 │  scheduler        supercronic + crontab → `docker compose run lab …` │
@@ -41,7 +42,7 @@ whole point of it being a profile.
 
 ## The lab image
 
-The lab needs three runtimes in one place: the **qkt CLI** (JVM), the **claude
+The lab needs three runtimes in one place: the **qkt CLI** (JVM), the **Codex
 CLI** (node), and **python** (the orchestration). Rather than reinstall a JRE, we
 build on qkt's own runtime stage, which already has one:
 
@@ -56,7 +57,7 @@ ENV JAVA_HOME=/opt/java  PATH="/opt/qkt/bin:/opt/java/bin:$PATH"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 python3-pip nodejs npm git ca-certificates \
- && npm install -g @anthropic-ai/claude-code \
+ && npm install -g @openai/codex@0.144.5 \
  && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -73,21 +74,26 @@ one-shot container that runs, writes to disk, and exits.
 
 ## Four things that need a decision, not a default
 
-### 1. `claude -p` needs a credential in the container
+### 1. `codex exec` needs a credential in the container
 
-This is the one credential in the system, and it's worth being precise: **it is not
-an API key** — it's your Claude subscription, via `CLAUDE_CODE_OAUTH_TOKEN`.
+The default local path reuses the host's ChatGPT-managed Codex login:
 
 ```bash
-claude setup-token          # on the host, once
-# paste into .env as CLAUDE_CODE_OAUTH_TOKEN
+codex login
+codex login status
 ```
 
-Spike S0.4 answered the two questions this rested on: headless `claude -p`
-works inside the container with only that token (or a `~/.claude` mount, which
-compose sets up and which also self-refreshes), and it rides the subscription
-pool — no API key anywhere. If either ever regresses, say so out loud: it
-breaks the no-keys property and changes what this repo can honestly claim.
+Compose bind-mounts only `~/.codex/auth.json` into the scheduler, read-write so
+Codex can refresh it. Treat that file like a password. The agent is invoked with
+`--ignore-user-config`, so unrelated host MCP servers and project preferences do
+not enter the automated run.
+
+Proposal-only sessions are ephemeral, read-only, and have shell, web, apps, and
+subagents disabled. Research gets live web and a workspace-write sandbox rooted
+at `memory/`; broker credential variables are stripped from its environment.
+Because default Docker blocks Codex's nested bubblewrap namespaces, Compose uses
+Codex's external-sandbox mode for research: the repo is mounted read-only, only
+`memory/`, `state/`, and `.git` are writable, and the research shell is disabled.
 
 ### 2. Scheduling: supercronic, not `cron`
 
@@ -150,6 +156,7 @@ which is what `qkt.config.yaml` already expects via `${QKT_*_URL}`.
 The gateway is the only service that needs to reach the outside world for the broker.
 RESEARCH needs outbound HTTPS for web search and keyless data. Nothing needs an inbound
 port except the journal UI and the charts server, and both are localhost-only by default.
+Set `LAB_CHARTS_PORT` if the default host port 8080 is already occupied.
 
 ## The state that matters
 
@@ -174,7 +181,7 @@ touches is a volume.**
 3. `touch KILL` on the host stops the next cycle from placing an order.
 4. The agent's memory edits appear as real commits in the host working tree.
 5. `docker compose logs scheduler` shows every cycle's stdout.
-6. No API keys in `.env` — only DB DSNs and the Claude subscription token.
+6. No model API key in `.env`; Codex reuses the host login.
 
 ## Refs
 

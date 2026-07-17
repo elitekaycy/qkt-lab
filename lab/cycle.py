@@ -119,8 +119,11 @@ def run(cfg: Config, qkt: Qkt, store: Store, inst: Instrument) -> CycleResult:
         raw, psha = agent_mod.run(
             cfg.root / "prompts" / "trader.md",
             packet,
+            provider=cfg.agent_provider,
+            agent_bin=cfg.agent_bin,
             model=cfg.model,
             images=images,
+            cwd=cfg.root,
         )
         prop = agent_mod.validate(raw)
     except agent_mod.AgentError as e:

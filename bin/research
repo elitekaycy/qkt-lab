@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""The analyst's own clock: open-ended claude -p with web search, hard artifact
+"""The analyst's own clock: headless agent with web search, hard artifact
 contract. The ONLY session with web access; it cannot trade and cannot touch
 beliefs (the scorer overwrites anything it wrote there on the next distill)."""
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from lab import agent as agent_mod
+from lab import calendar as calendar_mod
 from lab import config as cfgmod
 from lab.distill import anomaly_tickets
 from lab.store import Store
@@ -17,6 +20,25 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> int:
     cfg = cfgmod.load(ROOT / "lab.yaml")
+    cfg.memory_root.mkdir(parents=True, exist_ok=True)
+
+    # Never fold a human's uncommitted memory edits into an automated research
+    # commit. Resolve or commit them first so authorship stays auditable.
+    before = subprocess.run(
+        ["git", "status", "--porcelain", "memory/"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    if before:
+        print(
+            "RESEARCH REFUSED: memory/ already has uncommitted changes; "
+            "commit or stash them first.",
+            file=sys.stderr,
+        )
+        return 1
+
     anomalies = []
     try:
         anomalies = anomaly_tickets(Store(cfg.store_dsn), cfg)
@@ -30,24 +52,36 @@ def main() -> int:
         *anomaly_lines,
         "",
         f"Instruments: {', '.join(i.symbol for i in cfg.instruments)}",
-        f"Calendar cache to refresh: {cfg.calendar.cache}",
-        "Work from the repo root; write artifacts under memory/ only.",
+        f"Calendar cache to refresh: {cfg.calendar.cache.relative_to(cfg.memory_root)}",
+        "Your workspace root is the repository's memory/ directory.",
+        "Write artifacts only inside this workspace.",
     ])
 
-    r = subprocess.run(
-        [
-            "claude", "-p", task,
-            "--append-system-prompt", brief.read_text(),
-            "--model", cfg.model,
-            "--allowed-tools", "WebSearch,WebFetch,Read,Write,Edit,Glob,Grep",
-            "--output-format", "text",
-        ],
-        cwd=ROOT, timeout=1800, capture_output=True, text=True,
-    )
-    print(r.stdout[-4000:])
-    if r.returncode != 0:
-        print(r.stderr[-2000:], file=sys.stderr)
+    # The research model never receives broker credentials. Even with a shell
+    # tool, the gateway will reject any attempt to reach the account.
+    agent_env = os.environ.copy()
+    for key in list(agent_env):
+        if key.startswith(("QKT_BROKER_", "MT5_")):
+            agent_env.pop(key)
+
+    try:
+        output, _ = agent_mod.run_text(
+            brief,
+            task,
+            provider=cfg.agent_provider,
+            agent_bin=cfg.agent_bin,
+            model=cfg.model,
+            research=True,
+            external_sandbox=os.environ.get("CODEX_EXTERNAL_SANDBOX") == "1",
+            allowed_tools="WebSearch,WebFetch,Read,Write,Edit,Glob,Grep",
+            timeout_s=1800,
+            cwd=cfg.memory_root if cfg.agent_provider == "codex" else ROOT,
+            env=agent_env,
+        )
+    except agent_mod.AgentError as e:
+        print(str(e), file=sys.stderr)
         return 1
+    print(output[-4000:])
 
     # The artifact contract, enforced: a run that wrote nothing is a failed run.
     changed = subprocess.run(
@@ -57,12 +91,48 @@ def main() -> int:
     if not changed:
         print("RESEARCH CONTRACT VIOLATION: no artifacts written under memory/", file=sys.stderr)
         return 1
-    subprocess.run(["git", "add", "memory/"], cwd=ROOT)
+
+    # The calendar is safety-critical, so "a file was written" is not enough.
+    # Reject the run before committing if the deterministic gate cannot consume it.
+    calendar = calendar_mod.load(cfg)
+    if not calendar.ok:
+        print(
+            f"RESEARCH CONTRACT VIOLATION: invalid calendar cache: {calendar.reason}",
+            file=sys.stderr,
+        )
+        return 1
+
+    # The scheduler runs as container root, but memory is a host bind mount.
+    # Return generated artifacts to the host repository owner's uid/gid so the
+    # next human edit does not require sudo.
+    owner = cfg.root.stat()
+    for path in cfg.memory_root.rglob("*"):
+        try:
+            os.chown(path, owner.st_uid, owner.st_gid)
+        except PermissionError:
+            # Direct host runs already have the correct owner and may not be
+            # allowed to call chown, which is harmless.
+            pass
+
+    subprocess.run(["git", "add", "memory/"], cwd=ROOT, check=True)
     subprocess.run(
-        ["git", "-c", "commit.gpgsign=false", "commit", "-q", "-m",
-         "docs(memory): research cycle artifacts"],
+        [
+            "git",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-q",
+            "-m",
+            "docs(memory): research cycle artifacts",
+        ],
         cwd=ROOT,
+        check=True,
     )
+    for path in (ROOT / ".git").rglob("*"):
+        try:
+            os.chown(path, owner.st_uid, owner.st_gid)
+        except PermissionError:
+            pass
     print(f"artifacts committed:\n{changed}")
     return 0
 

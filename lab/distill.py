@@ -113,8 +113,11 @@ def run(cfg: Config, store: Store) -> dict[str, Any]:
             raw, _ = agent_mod.run(
                 cfg.root / "prompts" / "distiller.md",
                 packet,
+                provider=cfg.agent_provider,
+                agent_bin=cfg.agent_bin,
                 model=cfg.model,
                 timeout_s=600,
+                cwd=cfg.root,
             )
             ops = raw if isinstance(raw, list) else raw.get("ops", [])
             report["proposals"] = apply_ops(cfg, ops)
