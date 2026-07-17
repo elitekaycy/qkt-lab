@@ -25,3 +25,9 @@ Track record:
   week. Cannot be the corroborating source for a refresh that runs mid-week
   and reaches into the following week; Census list-view calendar filled the
   gap this run.
+- 2026-07-17: its UMich Jul 17 10:00 ET time was corroborated by Scotiabank's
+  monthly calendar (upgraded that event to confirmed), and its Jul 13-17 week
+  of times held throughout — including retail sales/claims/Philly Fed at
+  8:30 ET Jul 16, verified against the actual print reaction. For weeks it
+  covers, its ET times remain the best available; the 404-until-late-week
+  limitation stands (scotiabank-econ-calendar now covers that gap).

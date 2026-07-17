@@ -19,3 +19,8 @@ Track record:
 - 2026-07-16: ECB July date (Jul 23) matched the ECB's own Governing Council
   calendar; its TIME conflicts with the post-2022 convention, so the calendar
   entry was marked uncertain rather than trusting it.
+- 2026-07-17: the ECB time it gave (13:45 CET / 11:45Z decision) is now
+  contradicted by two independent sources (LiteFinance 12:15 GMT, Scotiabank
+  8:15 ET) that agree on the post-2022 convention. Scored as a MISS on ECB
+  times — the "bad at" above is confirmed, not just suspected. Dates remain
+  usable; never take a time from it alone.
