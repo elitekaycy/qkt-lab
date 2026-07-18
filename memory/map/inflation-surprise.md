@@ -2,7 +2,7 @@
 id: inflation-surprise
 kind: event
 instruments: [XAUUSD]
-retrieve_on: [cpi, ppi, pce, inflation]
+retrieve_on: [cpi, ppi, pce, inflation, umich, inflation_expectations]
 edges:
   - to: XAUUSD
     sign: "-"
@@ -39,6 +39,15 @@ Retrieve PPI alongside CPI: the 2026-07-15 episode shows PPI alone moves gold
 ~half a CPI when it surprises, which is far from ignorable. (Prior version of
 this node did not list ppi in retrieve_on — that gap is why the Jul 15 rally
 arrived with no map node retrieved.)
+
+UMich inflation expectations belong to this node, not just the sentiment
+headline to [[growth-surprise]]: on 2026-07-17 14:00Z the July prelim printed a
+hawkish headline beat (54.4 vs 51.0 exp) while 1y inflation expectations FELL
+4.6% -> 4.2% (5-10y flat at 3.3%). Gold did not sell the beat — the 14:00Z GC=F
+bar went 4000.7 -> 3999.2 (vol 3692) inside an already-recovering tape and the
+grind higher resumed into a ~+0.9% close. One episode, label hypothesis: when
+the sentiment headline and the inflation-expectation lines disagree, the
+expectations lines outrank the headline for gold in a hike-repricing regime.
 
 Scope this edge to the PRINT WINDOW (first 15m bar to a few hours). The week
 of Jul 13-17 showed a soft-inflation pop is not a trend signal: both pops were

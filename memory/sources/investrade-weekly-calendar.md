@@ -31,3 +31,11 @@ Track record:
   8:30 ET Jul 16, verified against the actual print reaction. For weeks it
   covers, its ET times remain the best available; the 404-until-late-week
   limitation stands (scotiabank-econ-calendar now covers that gap).
+- 2026-07-18: the Jul 20-24 page that 404ed Thursday was live by Saturday
+  06:00Z — pages publish by the weekend, so weekend refreshes CAN use it for
+  the coming week. Corroborated US flash PMIs Fri 9:45 ET (promoting them to
+  confirmed), leading indicators Mon 10:00 ET, claims Thu 8:30 ET, new home
+  sales Fri 10:00 ET. Sole source this refresh for KC Fed manufacturing
+  (Thu 11:00 ET), Chicago Fed NAI (Thu 8:30 ET), and the 20y Treasury
+  auction (Wed 1:00 PM ET). Listed zero Fed speakers — correct this time
+  (blackout), so not diagnostic of the known Fed-events gap.

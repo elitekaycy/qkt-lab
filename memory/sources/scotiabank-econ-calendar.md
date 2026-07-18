@@ -23,3 +23,11 @@ Track record:
   corroborated UMich Jul 17 10:00 ET (upgrading it to confirmed), housing
   starts Jul 17, new home sales Jul 24, durable goods Jul 27, and FOMC
   Jul 29 14:00 ET, all consistent with Census/Fed primaries.
+- 2026-07-18: re-fetched for the Jul 20-27 window. Corroborated US leading
+  indicators Jul 20 10:00 ET (promoted to confirmed) and Japan CPI Jul 23
+  19:30 ET; ECB/new-home-sales/durables entries unchanged. Puts UK CPI on
+  Jul 21 (2:00 ET = 06:00Z) against LiteFinance's Jul 22 — the date contest
+  is now 2-vs-1 for Jul 21, so the cache entry moved to Jul 21 but stays
+  uncertain. Completeness limits confirmed again: no jobless claims, no
+  S&P flash PMIs, no Treasury auctions, no regional Fed surveys (KC Fed,
+  Chicago Fed NAI all absent).
