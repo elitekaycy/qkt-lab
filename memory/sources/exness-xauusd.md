@@ -16,6 +16,26 @@ QUESTION: pin the Friday close minute from inside the platform or via the
 runner. Until then treat 21:45Z Friday as the conservative last-live moment.
 
 Track record:
+- 2026-07-19: ~15 tickets spanning Sat Jul 18 01:00Z through Sun Jul 19 05:00Z
+  show the packets ALTERNATING hour to hour between (a) stale reads — quote
+  timeMs decoding to Friday ~20:00-21:00Z, price pinned at the ~4023 close —
+  and (b) live-looking reads — quote timeMs matching packet 'now' (e.g. 13:58Z
+  Saturday), in-progress 1h/15m bars stamped same-hour Saturday, and one Sunday
+  05:00Z 15m bar with nonzero volume (v=1752). Web re-verification (WebSearch
+  2026-07-19, exness.com and get.exness.help both 403) is unanimous that Exness
+  gold remains 24/5, closed Sat/Sun — so the live-looking reads cannot be a
+  real weekend session. A consistent stale re-emit is also ruled out: half the
+  packets carry fresh weekend timestamps. Best explanation: some component
+  (packet builder or quote cache) intermittently RE-STAMPS cached Friday data
+  with fetch-time timestamps — and appears to synthesize bar boundaries too,
+  since "fresh" weekend bars open on the current hour. Confusion risk to note:
+  Vantage (a different broker) launched "XAUUSD247" 24/7 weekend gold CFDs in
+  Jul 2026; headlines about it must not be mistaken for an Exness session
+  change. FLAG TO RUNNER (upgraded): timestamps in weekend packets are not
+  trustworthy even for staleness detection — the session table, not the packet
+  clock, must decide liveness; nothing trades off Sat/Sun packets. Related: the
+  chart pack lags separately (Jul 18 tickets: both chart images ended Jul 17
+  ~15:00Z, ~6h before the Friday close, ~21h behind 'now').
 - 2026-07-18: two anomaly tickets reported "live quote and fresh bars" at
   01:00Z and 04:00Z on SATURDAY Jul 18. Every documented schedule has the
   venue closed then; no evidence found of an Exness weekend gold session
