@@ -8,6 +8,7 @@ diagnostic ones we have.
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -15,9 +16,9 @@ from . import agent as agent_mod
 from . import calendar as calendar_mod
 from . import charts as charts_mod
 from .config import Config, Instrument
-from .context import Context, gather
+from .context import Context, gather, gather_venue
 from .execute import place
-from .gates import Book, check
+from .gates import Book, check, check_quote
 from .qkt import Qkt
 from .retrieve import retrieve
 from .sizing import risk_currency, size
@@ -66,7 +67,38 @@ def run(cfg: Config, qkt: Qkt, store: Store, inst: Instrument) -> CycleResult:
 
     # 1. Venue truth + external context. If this fails there is no cycle at all —
     #    nothing to journal because nothing was decided.
-    ctx: Context = gather(cfg, qkt, inst)
+    account, quote = gather_venue(qkt, inst)
+
+    # Market freshness is deterministic and precedes the expensive/model path.
+    # Closed markets retain the last tick, so a numerically plausible quote can
+    # be days old. Journal the refusal explicitly instead of asking the model to
+    # notice it.
+    quote_rejects = check_quote(
+        quote,
+        max_age_seconds=cfg.gates.max_quote_age_seconds,
+        now=now,
+    )
+    if quote_rejects:
+        stale = Decision(
+            as_name=cfg.as_name(inst.symbol),
+            symbol=inst.symbol,
+            action="GATED",
+            arm=arm,
+            model=cfg.model,
+            equity_at_entry=float(account.get("equity", 0)),
+            gate_rejects=[{"gate": r.gate, "detail": r.detail} for r in quote_rejects],
+            context_snapshot={
+                "schemaVersion": 1,
+                "capturedAt": now.isoformat(),
+                "stage": "venue_preflight",
+                "account": account,
+                "quote": quote,
+            },
+        )
+        did = store.record(stale)
+        return CycleResult(did, "GATED", "; ".join(str(r) for r in quote_rejects))
+
+    ctx: Context = gather(cfg, qkt, inst, account=account, quote=quote)
 
     # 2. Calendar — the only LLM-populated input that feeds a gate. Fail-closed.
     cal = calendar_mod.load(cfg, now)
@@ -99,6 +131,7 @@ def run(cfg: Config, qkt: Qkt, store: Store, inst: Instrument) -> CycleResult:
         open_positions=book.open_positions,
         realized_today=book.realized_today,
     )
+    chart_snapshots = [json.loads(path.with_suffix(".json").read_text()) for path in images]
 
     base = Decision(
         as_name=cfg.as_name(inst.symbol),
@@ -111,6 +144,20 @@ def run(cfg: Config, qkt: Qkt, store: Store, inst: Instrument) -> CycleResult:
         map_nodes_used=slice_.map_ids,
         model=cfg.model,
         equity_at_entry=ctx.equity,
+        context_snapshot={
+            "schemaVersion": 1,
+            "capturedAt": ctx.now.isoformat(),
+            "stage": "proposal",
+            "account": ctx.account,
+            "quote": ctx.quote,
+            "bars": ctx.bars,
+            "indicators": ctx.indicators,
+            "calendar": events,
+            "openPositions": book.open_positions,
+            "realizedToday": book.realized_today,
+            "modelPacket": packet,
+            "chartSnapshots": chart_snapshots,
+        },
     )
 
     # 5. The model proposes. A malformed response is itself a journaled decision —
@@ -137,6 +184,9 @@ def run(cfg: Config, qkt: Qkt, store: Store, inst: Instrument) -> CycleResult:
     base.side = prop.side
     base.sl = prop.sl
     base.tp = prop.tp
+    base.expected_rr = (
+        float(prop.raw["expected_rr"]) if prop.raw.get("expected_rr") is not None else None
+    )
     base.conviction = prop.conviction
     base.setup = prop.setup
     base.factors = prop.factors

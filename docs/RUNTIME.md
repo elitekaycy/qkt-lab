@@ -154,7 +154,8 @@ qkt-lab/
   lab/                   config qkt context retrieve charts agent gates
                          sizing execute store join beliefs graph distill
   db/schema.sql          decision + outcome
-  exporters/             deltalytix.py (optional; loop runs without it)
+  journal-ui/            React + Tailwind journal source
+  dashboard/dist/        production journal bundle served at port 8421
 
   prompts/               trader.md  distiller.md  researcher.md
   playbooks/             xauusd.md            ← human-authored standing process

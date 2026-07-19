@@ -132,6 +132,8 @@ gates:                                # ALL must pass. Any rejection = no order.
   require_sl: true                    # no stop, no trade. Never disable.
   min_rr: 1.5                         # recomputed from real prices; the model's
                                       # own expected_rr is never trusted.
+  max_quote_age_seconds: 120          # fail before Codex when MT5 is closed or
+                                      # the gateway is serving an old last tick.
   max_open_positions: 3               # counted over LAB-OWNED tickets from our own
   max_exposure_lots: 0.5              # DB — never from `qkt bot positions`, which
                                       # has no magic filter and sees other strategies.
@@ -178,26 +180,8 @@ store:
   unjoined_alarm_days: 3              # a ticket open this long with no OUT deal
                                       # is a bug, not a trade. Alarm, don't ignore.
 
-# ---------------------------------------------------------------------------
-# The journal UI — what YOU open, read, search, and browse.
-# Deltalytix (self-hosted). Not on the loop's critical path: if it is down,
-# trades still execute and beliefs still score.
-# ---------------------------------------------------------------------------
-journal:
-  deltalytix:
-    enabled: false                    # opt in only after building the image and
-                                      # starting `--profile journal`; the base
-                                      # deployment must not log export errors.
-    dsn: ${DELTALYTIX_DATABASE_URL}
-    user_id: local-dashboard-user
-    user_email: local-dashboard@deltalytix.local
-    account_number: LAB-XAU
-    starting_balance: 1000            # required for the equity curve to render
-    charts_base_url: http://localhost:${LAB_CHARTS_PORT:-8080}/charts
-                                      # images[] must be URLs, not paths
-    export_no_trades: false           # NO_TRADE/GATED rows cannot exist in its schema.
-                                      # They stay in the lab store where the machine
-                                      # learns from them.
+# The first-party React journal reads this same Postgres at port 8421. There is
+# no export database and no second journal service.
 
 # ---------------------------------------------------------------------------
 # Data sources.

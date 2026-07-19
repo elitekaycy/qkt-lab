@@ -60,6 +60,25 @@ def test_conviction_out_of_range_rejected():
         validate(ok_trade(conviction=-0.1))
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("sl", float("nan")),
+        ("tp", float("inf")),
+        ("conviction", float("-inf")),
+        ("expected_rr", "NaN"),
+    ],
+)
+def test_non_finite_trade_numbers_are_rejected(field, value):
+    with pytest.raises(AgentError, match="finite"):
+        validate(ok_trade(**{field: value}))
+
+
+def test_non_numeric_trade_number_is_rejected_cleanly():
+    with pytest.raises(AgentError, match="sl must be a number"):
+        validate(ok_trade(sl="below support"))
+
+
 def test_extract_bare_json():
     assert _extract_json('{"a": 1}') == {"a": 1}
 

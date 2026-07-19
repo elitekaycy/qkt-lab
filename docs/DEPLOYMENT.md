@@ -27,18 +27,13 @@ docker compose up -d
 │      │                                                               │
 │  postgres         decision + outcome. The machine's source of truth. │
 │      │                                                               │
-│  charts           caddy, static. Serves state/charts over HTTP —     │
-│                   Deltalytix images[] takes URLs, not paths.         │
-│                                                                      │
-│  ── profile: journal (optional; the loop runs without it) ───────    │
-│  deltalytix       self-hosted UI. CC BY-NC, so: a plugin.            │
-│  deltalytix-db    its own postgres. Separate from ours, on purpose.  │
+│  charts           caddy, static. Serves immutable PNG evidence.      │
+│  journal-ui       React journal; reads the same Postgres directly.   │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-`docker compose up` runs the loop. `docker compose --profile journal up` also
-brings the UI. Nothing in the loop breaks if the journal is down — that's the
-whole point of it being a profile.
+`docker compose up` runs the loop and journal. There is one Postgres and no
+closed-trade export job or secondary journal database.
 
 ## The lab image
 
@@ -135,8 +130,8 @@ bind-mounted repo owned by a different uid).
 the host. If the container can't see that file appear, the emergency stop doesn't
 exist. Bind mount, and the gate stats it on every cycle.
 
-**`state/` (charts, logs)** can be a bind mount too — the charts service serves it and
-Deltalytix links to it.
+**`state/` (charts, logs)** can be a bind mount too — the charts service serves
+the immutable PNG evidence.
 
 ### 4. qkt must be a *published* image, or nobody can run this
 
@@ -174,14 +169,12 @@ touches is a volume.**
 
 ## Acceptance
 
-1. `docker compose up -d` on a clean machine brings up gateway, postgres, scheduler,
-   charts — and the loop runs on schedule with no host-side setup beyond `.env`.
-2. `docker compose --profile journal up -d` additionally brings the UI, and stopping
-   it **does not stop the loop**.
-3. `touch KILL` on the host stops the next cycle from placing an order.
-4. The agent's memory edits appear as real commits in the host working tree.
-5. `docker compose logs scheduler` shows every cycle's stdout.
-6. No model API key in `.env`; Codex reuses the host login.
+1. `docker compose up -d` on a clean machine brings up gateway, one Postgres,
+   scheduler, charts, and the React journal.
+2. `touch KILL` on the host stops the next cycle from placing an order.
+3. The agent's memory edits appear as real commits in the host working tree.
+4. `docker compose logs scheduler` shows every cycle's stdout.
+5. No model API key in `.env`; Codex reuses the host login.
 
 ## Refs
 

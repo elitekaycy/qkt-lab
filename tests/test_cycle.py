@@ -29,7 +29,13 @@ class FakeQkt:
         return {"ok": True, "equity": 10000.0, "currency": "USD"}
 
     def quote(self, symbol):
-        return {"symbol": symbol, "bid": 2609.7, "ask": 2609.9, "spread": 0.2}
+        return {
+            "symbol": symbol,
+            "bid": 2609.7,
+            "ask": 2609.9,
+            "spread": 0.2,
+            "timeMs": int(datetime.now(UTC).timestamp() * 1000),
+        }
 
     def bars(self, symbol, tf, count=200):
         base = 2600.0
@@ -156,6 +162,11 @@ def test_trade_end_to_end(wired, monkeypatch):
     assert d.conviction == 0.6
     assert d.prompt_sha == "sha16"
     assert len(d.charts) == 2  # both timeframes rendered and archived
+    assert d.context_snapshot["schemaVersion"] == 1
+    assert d.context_snapshot["account"]["currency"] == "USD"
+    assert len(d.context_snapshot["bars"]["1h"]) == 60
+    assert len(d.context_snapshot["chartSnapshots"]) == 2
+    assert d.context_snapshot["modelPacket"]["quote"]["ask"] == 2609.9
 
 
 def test_no_trade_is_recorded_not_skipped(wired, monkeypatch):
@@ -182,6 +193,15 @@ def test_bad_rr_is_gated_and_journaled(wired, monkeypatch):
     assert qkt.orders == []  # nothing reached the venue
 
 
+def test_missing_take_profit_is_gated_and_never_reaches_venue(wired, monkeypatch):
+    agent_returns(monkeypatch, {**TRADE_JSON, "tp": None})
+    store, qkt = FakeStore(), FakeQkt()
+    r = cycle.run(wired, qkt, store, wired.instruments[0])
+    assert r.action == "GATED"
+    assert any(g["gate"] == "require_tp" for g in store.decisions[-1].gate_rejects)
+    assert qkt.orders == []
+
+
 def test_stale_calendar_gates_the_trade(wired, monkeypatch):
     wired.calendar.cache.write_text(
         yaml.safe_dump(
@@ -196,6 +216,34 @@ def test_stale_calendar_gates_the_trade(wired, monkeypatch):
     r = cycle.run(wired, qkt, store, wired.instruments[0])
     assert r.action == "GATED"
     assert any(g["gate"] == "calendar_unavailable" for g in store.decisions[-1].gate_rejects)
+    assert qkt.orders == []
+
+
+def test_stale_quote_is_gated_before_the_agent_runs(wired, monkeypatch):
+    called = False
+
+    def should_not_run(*args, **kwargs):
+        nonlocal called
+        called = True
+        return TRADE_JSON, "sha16"
+
+    monkeypatch.setattr(agent_mod, "run", should_not_run)
+    qkt, store = FakeQkt(), FakeStore()
+    qkt.quote = lambda symbol: {
+        "symbol": symbol,
+        "bid": 2609.7,
+        "ask": 2609.9,
+        "timeMs": 1,
+    }
+    qkt.bars = lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError("stale quote must gate before bars")
+    )
+    r = cycle.run(wired, qkt, store, wired.instruments[0])
+    assert r.action == "GATED"
+    assert any(g["gate"] == "quote_freshness" for g in store.decisions[-1].gate_rejects)
+    assert store.decisions[-1].context_snapshot["stage"] == "venue_preflight"
+    assert store.decisions[-1].context_snapshot["quote"]["timeMs"] == 1
+    assert not called
     assert qkt.orders == []
 
 

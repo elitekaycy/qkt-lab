@@ -16,6 +16,10 @@ from .config import Config
 from .store import Store
 
 
+class LiveReadinessError(RuntimeError):
+    """The configured experiment has not earned permission to trade live."""
+
+
 @dataclass(frozen=True)
 class ArmStats:
     arm: str
@@ -90,3 +94,19 @@ def run(cfg: Config, store: Store) -> ABResult:
     reached = b.n >= min_n and c.n >= min_n
     passed = reached and t > 0 and p < 0.05
     return ABResult(b, c, b.mean_r - c.mean_r, t, p, reached, passed)
+
+
+def assert_live_ready(cfg: Config, store: Store) -> None:
+    """Recompute the proof from broker-joined episodes at process start.
+
+    ``experiment.ab_passed`` is only the human acknowledgement required by
+    config loading. It is not evidence and cannot substitute for the database.
+    """
+    if cfg.mode != "live":
+        return
+    result = run(cfg, store)
+    if not result.passed:
+        raise LiveReadinessError(
+            "LIVE REFUSED: the current episode database does not pass the "
+            "pre-registered beliefs-vs-control A/B.\n" + result.render()
+        )

@@ -18,7 +18,6 @@ def cfg_with(cfg: cfgmod.Config, **kw):
 def cfg(monkeypatch, tmp_path) -> cfgmod.Config:
     """The real lab.yaml, so the tests exercise the config we actually ship."""
     monkeypatch.setenv("LAB_DATABASE_URL", "postgresql://lab:lab@localhost:5432/lab")
-    monkeypatch.setenv("DELTALYTIX_DATABASE_URL", "postgresql://x:x@localhost:5433/x")
     c = cfgmod.load(ROOT / "lab.yaml")
     # Point the kill switch somewhere that definitely does not exist, so a stray
     # KILL file in the working tree cannot make the suite pass for the wrong reason.

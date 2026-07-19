@@ -7,12 +7,11 @@ episodes into memory that makes the next decision better.
 
 Everything is driven from one file: [`lab.yaml`](lab.yaml).
 
-> **Status: running, in demo.** All six phases are implemented and tested,
-> including the false-discovery gate proven on live Postgres and the
-> keyless endpoints hit for real), and the loop has been live against a demo
-> account since 2026-07-14 — the Phase 6 A/B is accumulating its pre-registered
-> sample. Nothing here has traded real money — `mode: live` refuses to start
-> until that A/B has run and passed.
+> **Status: running, in demo.** The scheduler is recording real decisions against
+> an authenticated demo account, but there are no accepted or broker-joined
+> trades yet, so the preregistered Phase 6 sample has not started. Nothing here
+> has traded real money — `mode: live` refuses to start until that A/B has run
+> and passed.
 
 ## Getting started
 
@@ -49,7 +48,7 @@ server and journal URLs use it automatically.
 Confirm `codex login status` says you are logged in before starting Compose.
 
 ```bash
-docker compose up -d          # gateway, postgres, schema, scheduler, charts
+docker compose up -d          # gateway, postgres, scheduler, charts, decision journal
 touch KILL                    # emergency stop, any time; rm KILL to resume
 ```
 
@@ -72,6 +71,13 @@ distill nightly, research daily. Editing a schedule in `lab.yaml` and
 `NO_TRADE` on your first cycle is the common case and the honest one — most
 hours have no edge, and the system journals that with the same rigor as a trade.
 
+Open `http://localhost:8421` for the complete React journal. It includes an
+authenticated account card, realized-performance widgets, equity curve,
+calendar, setup/hour analytics, all TRADE/NO_TRADE/GATED cycles, exact UTC
+timestamps, model reasoning, provenance, outcomes, and archived model-input
+charts. A decision detail renders the stored broker bars and EMA/RSI/ATR with
+TradingView Lightweight Charts and can save that complete view as PNG.
+
 ### Watching it think
 
 Every decision is written down before anything else happens, so the audit trail
@@ -91,36 +97,21 @@ Every decision is written down before anything else happens, so the audit trail
   research lands as real commits. `git log --oneline -- memory/` is the history
   of it changing its mind.
 
-### The journal UI (optional)
+### One journal, one database
 
-For a visual journal — equity curve, calendar, per-trade cards with charts and
-rationale — the lab exports to a self-hosted [Deltalytix](https://github.com/hugodemenez/deltalytix).
-It's CC BY-NC (not OSI), so no prebuilt image ships; you build it yourself:
+The journal reads the same Postgres tables used by the gates, joiner, beliefs,
+and outcome calculations. There is no export job, second database, cache, auth
+bypass, or eventual-consistency boundary. Each decision stores a versioned
+context snapshot in Postgres: account/quote truth, broker bars, indicators,
+calendar, exact model packet, and TradingView-ready studies. Immutable PNGs
+remain alongside it as the visual artifact shown to the model.
+
+For frontend work:
 
 ```bash
-git clone https://github.com/hugodemenez/deltalytix ../deltalytix
-docker build ../deltalytix -f ../deltalytix/Dockerfile.bun -t deltalytix:local \
-  --build-arg NEXT_PUBLIC_LOCAL_DASHBOARD_AUTH_BYPASS=true \
-  --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000
-
-docker compose --profile journal up -d
-
-# one-time: apply Deltalytix's schema to its database
-docker run --rm --network qkt-lab_default -v $PWD/../deltalytix:/w -w /w \
-  -e DATABASE_URL=postgresql://deltalytix:deltalytix@deltalytix-db:5432/deltalytix \
-  -e DIRECT_URL=postgresql://deltalytix:deltalytix@deltalytix-db:5432/deltalytix \
-  oven/bun:1 sh -c 'bun install --frozen-lockfile && bunx prisma db push'
+make ui
+docker compose restart journal-ui
 ```
-
-Open `http://localhost:3000` — no login; the auth bypass is baked into the
-image, which is exactly why compose binds it to `127.0.0.1` only. Never expose
-this port. Closed trades appear within one join interval (15 min); the UI
-caches reads for an hour, so `docker compose restart deltalytix` forces a
-refresh.
-
-Skipping the UI? Set `journal.deltalytix.enabled: false` in `lab.yaml`, or the
-export step will log an error after every join. The loop itself never depends
-on it.
 
 ---
 
@@ -155,6 +146,10 @@ The trader cannot edit its own memory. The distiller cannot see an open trade. T
 researcher cannot place an order.
 
 Full walkthrough with a worked week: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+For the exact running path, calculations, and management boundary, read
+[`docs/DECISION-LIFECYCLE.md`](docs/DECISION-LIFECYCLE.md). The current
+real-money verdict and required fixes are tracked in
+[`docs/PRODUCTION-READINESS.md`](docs/PRODUCTION-READINESS.md).
 
 ### It writes its own tooling — carefully
 
@@ -317,8 +312,9 @@ qkt-lab is MIT. Its two core dependencies:
   `qkt bot` CLI this drives. Apache-2.0.
 - **[mt5-gateway](https://github.com/elitekaycy/mt5-gateway)** — the MT5 bridge. MIT.
 
-**Deltalytix** (the journal UI) is **CC BY-NC 4.0** — not an OSI license. It's a
-plugin behind `journal.deltalytix.enabled`, and the loop runs fully without it.
+The first-party journal is React, Tailwind CSS, Recharts, and the official
+TradingView Lightweight Charts package; it ships under this repository's MIT
+license.
 
 ---
 

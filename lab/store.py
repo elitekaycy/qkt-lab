@@ -7,6 +7,7 @@ have.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -38,6 +39,7 @@ class Decision:
     rationale_md: str | None = None
     invalidation: str | None = None
     charts: list[str] = field(default_factory=list)
+    context_snapshot: dict[str, Any] = field(default_factory=dict)
 
     map_nodes_used: list[str] = field(default_factory=list)
     beliefs_used: list[str] = field(default_factory=list)
@@ -64,7 +66,7 @@ class Decision:
     qkt_version: str | None = None
 
 
-_JSON_COLS = {"factors", "news", "regime", "gate_rejects"}
+_JSON_COLS = {"factors", "news", "regime", "gate_rejects", "context_snapshot"}
 _ARRAY_COLS = {
     "charts",
     "map_nodes_used",
@@ -86,6 +88,28 @@ class Store:
         with self._conn() as c:
             c.execute(schema.read_text())
             c.commit()
+
+    @contextmanager
+    def cycle_lock(self, key: str):
+        """Hold a cross-process Postgres advisory lock for one trade cycle.
+
+        Cron, manual invocations, and multiple scheduler replicas must not run
+        the same instrument concurrently.
+        """
+        with self._conn() as c:
+            row = c.execute(
+                "SELECT pg_try_advisory_lock(hashtextextended(%s, 0)) AS acquired",
+                (key,),
+            ).fetchone()
+            acquired = bool(row and row["acquired"])
+            try:
+                yield acquired
+            finally:
+                if acquired:
+                    c.execute(
+                        "SELECT pg_advisory_unlock(hashtextextended(%s, 0))",
+                        (key,),
+                    )
 
     def record(self, d: Decision) -> int:
         data = asdict(d)
@@ -139,6 +163,32 @@ class Store:
                     duration_s,
                     Jsonb(deals),
                 ),
+            )
+            c.commit()
+
+    def start_job(self, job: str, command: str) -> int:
+        with self._conn() as c:
+            row = c.execute(
+                """
+                INSERT INTO job_run (job, command)
+                VALUES (%s, %s)
+                RETURNING id
+                """,
+                (job, command),
+            ).fetchone()
+            c.commit()
+        assert row is not None
+        return int(row["id"])
+
+    def finish_job(self, run_id: int, *, ok: bool, detail: str) -> None:
+        with self._conn() as c:
+            c.execute(
+                """
+                UPDATE job_run
+                SET finished_at = now(), ok = %s, detail = %s
+                WHERE id = %s
+                """,
+                (ok, detail, run_id),
             )
             c.commit()
 

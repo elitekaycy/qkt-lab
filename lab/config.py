@@ -70,6 +70,7 @@ class Instrument:
 class Gates:
     require_sl: bool
     min_rr: float
+    max_quote_age_seconds: int
     max_open_positions: int
     max_exposure_lots: float
     max_daily_loss_pct: float
@@ -224,6 +225,7 @@ def load(path: str | Path = "lab.yaml") -> Config:
         gates=Gates(
             require_sl=bool(gates.get("require_sl", True)),
             min_rr=float(gates.get("min_rr", 1.5)),
+            max_quote_age_seconds=int(gates.get("max_quote_age_seconds", 120)),
             max_open_positions=int(gates.get("max_open_positions", 3)),
             max_exposure_lots=float(gates.get("max_exposure_lots", 0.5)),
             max_daily_loss_pct=float(gates.get("max_daily_loss_pct", 2.0)),
@@ -291,6 +293,10 @@ def _validate(cfg: Config) -> None:
 
     if not cfg.gates.require_sl:
         raise ConfigError("gates.require_sl=false. Every trade must carry a stop. Not negotiable.")
+    if cfg.gates.min_rr <= 0:
+        raise ConfigError("gates.min_rr must be > 0 so every trade has a bounded reward target")
+    if cfg.gates.max_quote_age_seconds <= 0:
+        raise ConfigError("gates.max_quote_age_seconds must be > 0")
     if not cfg.calendar.fail_closed:
         raise ConfigError(
             "calendar.fail_closed=false. A stale calendar would let the loop trade "

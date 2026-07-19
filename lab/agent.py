@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import shlex
 import subprocess
@@ -86,23 +87,38 @@ def validate(raw: dict[str, Any]) -> Proposal:
 
     def num(k: str) -> float | None:
         v = raw.get(k)
-        return None if v is None else float(v)
+        if v is None:
+            return None
+        try:
+            parsed = float(v)
+        except (TypeError, ValueError):
+            raise AgentError(f"{k} must be a number, got {v!r}") from None
+        if not math.isfinite(parsed):
+            raise AgentError(f"{k} must be finite, got {v!r}")
+        return parsed
 
-    conviction = float(raw.get("conviction", 0.0))
+    conviction = num("conviction")
+    conviction = 0.0 if conviction is None else conviction
     if not 0.0 <= conviction <= 1.0:
         raise AgentError(f"conviction must be in [0,1], got {conviction}")
+
+    sl = num("sl")
+    tp = num("tp")
+    # This remains a model claim, but validating its representation here keeps
+    # NaN/Infinity out of Postgres and out of gate diagnostics.
+    num("expected_rr")
 
     if action == "TRADE":
         if side not in SIDES:
             raise AgentError(f"TRADE needs side BUY|SELL, got {side!r}")
-        if num("sl") is None:
+        if sl is None:
             raise AgentError("TRADE without a stop-loss — the gate would refuse it anyway")
 
     return Proposal(
         action=action,
         side=side,
-        sl=num("sl"),
-        tp=num("tp"),
+        sl=sl,
+        tp=tp,
         conviction=conviction,
         setup=raw.get("setup"),
         factors=[str(f) for f in raw.get("factors", [])],

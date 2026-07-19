@@ -120,13 +120,13 @@ start believing it"* is the first question, and it has an answer.
 
 ### Everything runs from compose
 
-`docker compose up -d` brings the loop; `--profile journal` adds the UI, and stopping
-it doesn't stop the loop. → [`DEPLOYMENT.md`](DEPLOYMENT.md)
+`docker compose up -d` brings the loop and first-party journal together.
+→ [`DEPLOYMENT.md`](DEPLOYMENT.md)
 
 Services: `mt5-gateway` (published image) · `lab` (qkt CLI + claude CLI + python, one
 shot) · `scheduler` (supercronic, crontab generated from `lab.yaml`) · `postgres` ·
-`charts` (static, so Deltalytix's `images[]` URLs resolve) · optional `deltalytix` +
-its own db.
+`charts` (immutable model-input PNGs) · `journal-ui` (React read surface). The
+journal, scheduler, gates, and joiner share one Postgres.
 
 Two rules that are correctness requirements, not preferences:
 
@@ -150,7 +150,7 @@ Each phase ships a working system. No phase is a refactor of the last.
 | **0** | [Spikes](specs/phase-0-spikes.md) | the design survives contact, or it doesn't | [#1](../../issues/1) |
 | **1** | [The loop](specs/phase-1-loop.md) | one honest trade, end to end | [#2](../../issues/2) |
 | **2** | [Context](specs/phase-2-context.md) | charts, calendar, macro, sentiment | [#3](../../issues/3) |
-| **3** | [Journal UI](specs/phase-3-journal.md) | Deltalytix — read, search, calendar, equity | [#4](../../issues/4) |
+| **3** | [Journal UI](specs/phase-3-journal.md) | first-party read, search, calendar, analytics, evidence | [#4](../../issues/4) |
 | **4** | [Memory](specs/phase-4-memory.md) | the causal graph + retrieval | [#5](../../issues/5) |
 | **5** | [Learning](specs/phase-5-learning.md) | distiller, belief scoring, research clock | [#6](../../issues/6) |
 | **6** | [Proof](specs/phase-6-proof.md) | the A/B that could sink it | [#7](../../issues/7) |

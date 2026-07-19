@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from lab import config as cfgmod
 from lab.cycle import run
+from lab.experiment import LiveReadinessError, assert_live_ready
 from lab.qkt import Qkt
 from lab.store import Store
 
@@ -16,12 +17,21 @@ def main() -> int:
     cfg = cfgmod.load(Path(__file__).resolve().parents[1] / "lab.yaml")
     qkt = Qkt(cfg.qkt_bin, cfg.qkt_config, cfg.qkt_timeout_s, cfg.qkt_retries)
     store = Store(cfg.store_dsn)
+    try:
+        assert_live_ready(cfg, store)
+    except LiveReadinessError as e:
+        print(str(e), file=sys.stderr)
+        return 2
 
     instruments = [cfg.instrument(symbol)] if symbol else cfg.instruments
     rc = 0
     for inst in instruments:
         try:
-            r = run(cfg, qkt, store, inst)
+            with store.cycle_lock(f"trade:{inst.symbol}") as acquired:
+                if not acquired:
+                    print(f"{inst.symbol}: SKIPPED — another cycle is already running")
+                    continue
+                r = run(cfg, qkt, store, inst)
             print(f"{inst.symbol}: {r.action} (decision {r.decision_id}) — {r.detail}")
         except Exception as e:  # a failed cycle must not stop the other instruments
             print(f"{inst.symbol}: CYCLE FAILED — {e}", file=sys.stderr)

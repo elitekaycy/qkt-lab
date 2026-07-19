@@ -63,7 +63,11 @@ ourselves.
 
 1. the A/B has run to the pre-registered sample, and
 2. it passed, and
-3. a human explicitly flipped the mode.
+3. a human explicitly records `experiment.ab_passed: true` and flips the mode.
+
+The executable recomputes the A/B from the current broker-joined `episode`
+rows at every live process start. The config acknowledgement is not accepted as
+proof by itself.
 
 Not a warning. A refusal, in code.
 

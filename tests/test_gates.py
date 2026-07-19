@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from lab.gates import Book, check
+from lab.gates import Book, check, check_quote
 from tests.conftest import cfg_with
 
 NOW = datetime(2026, 7, 14, 8, 0, tzinfo=UTC)
@@ -23,6 +23,28 @@ def proposal(**kw):
 
 def gates_of(r):
     return {x.gate for x in r}
+
+
+def test_fresh_quote_passes_preflight():
+    quote = {"bid": 2609.7, "ask": 2609.9, "timeMs": int(NOW.timestamp() * 1000)}
+    assert check_quote(quote, max_age_seconds=120, now=NOW) == []
+
+
+def test_stale_quote_fails_preflight():
+    quote = {
+        "bid": 2609.7,
+        "ask": 2609.9,
+        "timeMs": int((NOW - timedelta(minutes=5)).timestamp() * 1000),
+    }
+    assert "quote_freshness" in gates_of(check_quote(quote, max_age_seconds=120, now=NOW))
+
+
+def test_crossed_or_incomplete_quote_fails_preflight():
+    crossed = {"bid": 2610.0, "ask": 2609.9, "timeMs": int(NOW.timestamp() * 1000)}
+    assert "quote_integrity" in gates_of(check_quote(crossed, max_age_seconds=120, now=NOW))
+    assert "quote_integrity" in gates_of(
+        check_quote({"bid": 1, "ask": 2}, max_age_seconds=120, now=NOW)
+    )
 
 
 def test_clean_proposal_passes(cfg):
@@ -55,6 +77,20 @@ def test_min_rr_recomputed_from_prices_not_from_the_models_claim(cfg):
     assert "0.50" in detail and "model claimed 5.00" in detail
 
 
+def test_take_profit_is_required_when_min_rr_is_enabled(cfg):
+    r = check(
+        cfg,
+        cfg.instruments[0],
+        proposal(tp=None),
+        equity=10000,
+        book=FLAT,
+        lots=0.1,
+        events=[],
+        now=NOW,
+    )
+    assert "require_tp" in gates_of(r)
+
+
 def test_buy_with_stop_above_entry_is_refused(cfg):
     """A mis-specified order the venue might well accept."""
     p = proposal(side="BUY", entry_price=2600.0, sl=2610.0, tp=2650.0)
@@ -66,6 +102,32 @@ def test_sell_with_stop_below_entry_is_refused(cfg):
     p = proposal(side="SELL", entry_price=2600.0, sl=2590.0, tp=2500.0)
     r = check(cfg, cfg.instruments[0], p, equity=10000, book=FLAT, lots=0.1, events=[], now=NOW)
     assert "sl_direction" in gates_of(r)
+
+
+def test_buy_with_take_profit_below_entry_is_refused(cfg):
+    p = proposal(side="BUY", entry_price=2600.0, sl=2590.0, tp=2595.0)
+    r = check(cfg, cfg.instruments[0], p, equity=10000, book=FLAT, lots=0.1, events=[], now=NOW)
+    assert "tp_direction" in gates_of(r)
+
+
+def test_sell_with_take_profit_above_entry_is_refused(cfg):
+    p = proposal(side="SELL", entry_price=2600.0, sl=2610.0, tp=2620.0)
+    r = check(cfg, cfg.instruments[0], p, equity=10000, book=FLAT, lots=0.1, events=[], now=NOW)
+    assert "tp_direction" in gates_of(r)
+
+
+def test_non_finite_price_is_refused(cfg):
+    r = check(
+        cfg,
+        cfg.instruments[0],
+        proposal(tp=float("nan")),
+        equity=10000,
+        book=FLAT,
+        lots=0.1,
+        events=[],
+        now=NOW,
+    )
+    assert "price_integrity" in gates_of(r)
 
 
 def test_kill_switch_refuses_everything(cfg, tmp_path):
