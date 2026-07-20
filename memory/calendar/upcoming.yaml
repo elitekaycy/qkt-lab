@@ -1,39 +1,26 @@
-fetched_at: "2026-07-17T00:00:00Z"
-window:
-  from: "2026-07-17T00:00:00Z"
-  through: "2026-07-24T23:59:00Z"
-instrument: "EXNESS:XAUUSD"
+fetched_at: 2026-07-20T00:00:00Z
 events:
-  - id: "2026-07-23-ecb-policy-decision"
-    name: "ECB monetary policy decision"
-    at: "2026-07-23T12:15:00Z"
+  - name: US initial jobless claims
+    at: 2026-07-23T12:30:00Z
     impact: high
-    affects:
-      - "EXNESS:XAUUSD"
-      - "EUR"
-      - "USD"
-      - "European sovereign yields"
+    affects: [XAUUSD, USD, UST]
     confidence: confirmed
     sources:
-      - "https://www.ecb.europa.eu/press/govcdec/html/index.en.html"
-      - "https://tickward.com/en/calendars/central-bank-meeting-dates"
-    notes: "ECB states 14:15 Frankfurt publication time; July is CEST (UTC+2). Date independently listed by Tickward."
-
-  - id: "2026-07-23-ecb-press-conference"
-    name: "ECB monetary policy press conference"
-    at: "2026-07-23T12:45:00Z"
+      - https://www.dol.gov/newsroom/releases/ETA
+      - https://www.kiplinger.com/investing/economy/this-weeks-economic-calendar
+  - name: S&P Global flash US manufacturing and services PMI
+    at: 2026-07-24T13:45:00Z
     impact: high
-    affects:
-      - "EXNESS:XAUUSD"
-      - "EUR"
-      - "USD"
-      - "European sovereign yields"
+    affects: [XAUUSD, USD, UST]
     confidence: confirmed
     sources:
-      - "https://www.ecb.europa.eu/press/press_conference/html/index.en.html"
-      - "https://tickward.com/en/calendars/central-bank-meeting-dates"
-    notes: "ECB schedules its policy press conference for 14:45 Frankfurt time; July is CEST (UTC+2)."
-
-notes:
-  - "No other high-impact scheduled macro release was identified in the UTC window. Routine weekly claims and regional/state releases were excluded."
-  - "Calendar checked against official Federal Reserve, BLS, BEA, Census, and ECB schedules on 2026-07-17."
+      - https://www.pmi.spglobal.com/Public/Home/PDF/UK_Rel_Dates
+      - https://www.kiplinger.com/investing/economy/this-weeks-economic-calendar
+  - name: US new residential sales
+    at: 2026-07-24T14:00:00Z
+    impact: high
+    affects: [XAUUSD, USD, UST]
+    confidence: confirmed
+    sources:
+      - https://www.census.gov/economic-indicators/calendar-listview.html
+      - https://www.kiplinger.com/investing/economy/this-weeks-economic-calendar
