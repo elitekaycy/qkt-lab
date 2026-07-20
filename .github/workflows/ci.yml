@@ -35,8 +35,8 @@ jobs:
 
       - name: Lint
         run: |
-          ruff check lab tests exporters bin
-          ruff format --check lab tests exporters
+          ruff check lab tests bin
+          ruff format --check lab tests
 
       # SELF-ADVANCING acceptance: the procedure runner must never grow a shell.
       # A scraped page can carry prompt injection; executing a model-authored
