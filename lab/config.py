@@ -70,6 +70,7 @@ class Instrument:
 class Gates:
     require_sl: bool
     min_rr: float
+    max_quote_age_seconds: int
     max_open_positions: int
     max_exposure_lots: float
     max_daily_loss_pct: float
@@ -123,6 +124,8 @@ class Config:
 
     instruments: list[Instrument]
     as_prefix: str
+    agent_provider: str
+    agent_bin: str
     model: str
 
     risk: Risk
@@ -205,7 +208,9 @@ def load(path: str | Path = "lab.yaml") -> Config:
         qkt_retries=int(q.get("retries", 2)),
         instruments=instruments,
         as_prefix=agent.get("as_prefix", "lab"),
-        model=agent.get("model", "claude-fable-5"),
+        agent_provider=agent.get("provider", "codex"),
+        agent_bin=agent.get("bin", "codex"),
+        model=agent.get("model", "gpt-5.6-sol"),
         risk=Risk(
             risk_per_trade_pct=float(risk["risk_per_trade_pct"]),
             portfolio_heat_pct=float(risk.get("portfolio_heat_pct", 2.0)),
@@ -220,6 +225,7 @@ def load(path: str | Path = "lab.yaml") -> Config:
         gates=Gates(
             require_sl=bool(gates.get("require_sl", True)),
             min_rr=float(gates.get("min_rr", 1.5)),
+            max_quote_age_seconds=int(gates.get("max_quote_age_seconds", 120)),
             max_open_positions=int(gates.get("max_open_positions", 3)),
             max_exposure_lots=float(gates.get("max_exposure_lots", 0.5)),
             max_daily_loss_pct=float(gates.get("max_daily_loss_pct", 2.0)),
@@ -252,6 +258,12 @@ def _validate(cfg: Config) -> None:
     """Fail at startup, not at the moment an order is placed."""
     if cfg.mode not in ("demo", "live"):
         raise ConfigError(f"lab.mode must be demo|live, got {cfg.mode!r}")
+    if cfg.agent_provider not in ("codex", "claude"):
+        raise ConfigError(f"agent.provider must be codex|claude, got {cfg.agent_provider!r}")
+    if not cfg.agent_bin.strip():
+        raise ConfigError("agent.bin must not be empty")
+    if not cfg.model.strip():
+        raise ConfigError("agent.model must not be empty")
 
     # `live` is gated on the phase-6 A/B. Refusing here is the gate.
     if cfg.mode == "live" and not cfg.raw.get("experiment", {}).get("ab_passed"):
@@ -281,6 +293,10 @@ def _validate(cfg: Config) -> None:
 
     if not cfg.gates.require_sl:
         raise ConfigError("gates.require_sl=false. Every trade must carry a stop. Not negotiable.")
+    if cfg.gates.min_rr <= 0:
+        raise ConfigError("gates.min_rr must be > 0 so every trade has a bounded reward target")
+    if cfg.gates.max_quote_age_seconds <= 0:
+        raise ConfigError("gates.max_quote_age_seconds must be > 0")
     if not cfg.calendar.fail_closed:
         raise ConfigError(
             "calendar.fail_closed=false. A stale calendar would let the loop trade "

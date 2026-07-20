@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""Run one scheduled command and persist its operational result."""
+
+from __future__ import annotations
+
+import shlex
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from lab import config as cfgmod  # noqa: E402
+from lab.store import Store  # noqa: E402
+
+
+def main() -> int:
+    if len(sys.argv) < 3:
+        print("usage: run-job JOB COMMAND [ARG ...]", file=sys.stderr)
+        return 2
+
+    job = sys.argv[1]
+    command = sys.argv[2:]
+    cfg = cfgmod.load(ROOT / "lab.yaml")
+    store = Store(cfg.store_dsn)
+    run_id = store.start_job(job, shlex.join(command))
+    try:
+        result = subprocess.run(command, cwd=ROOT, check=False)
+    except Exception as error:
+        store.finish_job(run_id, ok=False, detail=f"{type(error).__name__}: {error}")
+        raise
+    store.finish_job(run_id, ok=result.returncode == 0, detail=f"exit {result.returncode}")
+    return result.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

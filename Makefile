@@ -1,4 +1,4 @@
-.PHONY: check test lint fmt
+.PHONY: check test lint fmt ui
 
 check: lint test
 
@@ -11,3 +11,6 @@ lint:
 
 fmt:
 	python3 -m ruff format lab tests
+
+ui:
+	cd journal-ui && npm ci && npm run build

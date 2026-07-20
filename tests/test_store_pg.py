@@ -25,7 +25,7 @@ def store():
     s = Store(DSN)
     s.migrate(ROOT / "db" / "schema.sql")
     with s._conn() as c:
-        c.execute("TRUNCATE outcome, decision RESTART IDENTITY CASCADE")
+        c.execute("TRUNCATE outcome, decision, job_run RESTART IDENTITY CASCADE")
         c.commit()
     return s
 
@@ -46,6 +46,11 @@ def trade_decision(ticket=88412):
         thesis="t",
         rationale_md="r",
         charts=["state/charts/x.png"],
+        context_snapshot={
+            "schemaVersion": 1,
+            "quote": {"bid": 2609.7, "ask": 2609.9},
+            "chartSnapshots": [{"title": "XAUUSD 1h", "bars": []}],
+        },
         ticket=ticket,
         fill_price=2609.94,
         accepted=True,
@@ -97,6 +102,7 @@ def test_full_round_trip(store):
     assert len(ep) == 1
     assert float(ep[0]["r_multiple"]) == pytest.approx(3.04)
     assert ep[0]["factors"] == ["trend:1h-up", "level:vwap-touch"]
+    assert ep[0]["context_snapshot"]["quote"]["ask"] == 2609.9
 
 
 def test_jsonb_predicates_work(store):
@@ -145,3 +151,16 @@ def test_no_trade_and_gated_rows_are_first_class(store):
     assert got == {"NO_TRADE": 1, "GATED": 1}
 
     assert store.realized_today() == 0.0
+
+
+def test_scheduled_job_ledger_records_start_and_finish(store):
+    run_id = store.start_job("join", "python3 /lab/bin/join")
+    running = store.query("SELECT * FROM job_run WHERE id = %s", (run_id,))[0]
+    assert running["finished_at"] is None
+    assert running["ok"] is None
+
+    store.finish_job(run_id, ok=True, detail="exit 0")
+    finished = store.query("SELECT * FROM job_run WHERE id = %s", (run_id,))[0]
+    assert finished["finished_at"] is not None
+    assert finished["ok"] is True
+    assert finished["detail"] == "exit 0"

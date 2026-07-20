@@ -1,5 +1,8 @@
 # qkt-lab — implementation plan
 
+> Historical design record. The July 2026 implementation replaced the evaluated
+> Deltalytix export plugin with the first-party React journal and one Postgres.
+
 Status: plan, not started. Date: 2026-07-13.
 Builds on the RFC verdict (own the store; markdown beliefs; gate the loop hard).
 Two verification sweeps behind it: `qkt bot` source read (file:line pinned) and

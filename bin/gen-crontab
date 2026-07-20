@@ -5,6 +5,7 @@ The compose scheduler runs `bin/gen-crontab > /tmp/crontab && supercronic
 /tmp/crontab` — editing a schedule in lab.yaml and restarting the container is
 the whole deployment story. Nothing here is hand-maintained.
 """
+
 import sys
 from pathlib import Path
 
@@ -24,14 +25,21 @@ def main() -> int:
     ]
 
     for inst in cfg.instruments:
-        lines.append(f"{inst.schedule} python3 /lab/bin/trade {inst.symbol}")
+        lines.append(
+            f"{inst.schedule} python3 /lab/bin/run-job trade python3 /lab/bin/trade {inst.symbol}"
+        )
 
     join = raw["store"]["join_interval"]
-    # export follows join so Deltalytix sees a closed trade within one interval.
-    lines.append(f"{join} python3 /lab/bin/join && python3 /lab/bin/export")
+    lines.append(f"{join} python3 /lab/bin/run-job join python3 /lab/bin/join")
 
-    lines.append(f"{raw['agent']['distiller']['schedule']} python3 /lab/bin/distill")
-    lines.append(f"{raw['agent']['researcher']['schedule']} python3 /lab/bin/research")
+    lines.append(
+        f"{raw['agent']['distiller']['schedule']} "
+        "python3 /lab/bin/run-job distill python3 /lab/bin/distill"
+    )
+    lines.append(
+        f"{raw['agent']['researcher']['schedule']} "
+        "python3 /lab/bin/run-job research python3 /lab/bin/research"
+    )
 
     print("\n".join(lines))
     return 0

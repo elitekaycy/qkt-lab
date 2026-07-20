@@ -10,7 +10,9 @@ import pytest
 import yaml
 
 from lab import config as cfgmod
+from lab.experiment import LiveReadinessError, assert_live_ready
 from lab.experiment import run as ab_run
+from tests.conftest import cfg_with
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,7 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_live_mode_refuses_without_ab_pass(tmp_path, monkeypatch):
     """Not a warning. A refusal, in code, at config load."""
     monkeypatch.setenv("LAB_DATABASE_URL", "postgresql://x")
-    monkeypatch.setenv("DELTALYTIX_DATABASE_URL", "postgresql://x")
     raw = yaml.safe_load((ROOT / "lab.yaml").read_text())
     raw["lab"]["mode"] = "live"
     p = tmp_path / "lab.yaml"
@@ -31,7 +32,6 @@ def test_live_mode_refuses_without_ab_pass(tmp_path, monkeypatch):
 
 def test_live_mode_with_ab_passed_loads(tmp_path, monkeypatch):
     monkeypatch.setenv("LAB_DATABASE_URL", "postgresql://x")
-    monkeypatch.setenv("DELTALYTIX_DATABASE_URL", "postgresql://x")
     raw = yaml.safe_load((ROOT / "lab.yaml").read_text())
     raw["lab"]["mode"] = "live"
     raw.setdefault("experiment", {})["ab_passed"] = True
@@ -84,3 +84,22 @@ def test_ab_no_difference_reports_not_passed_honestly(cfg):
     r = ab_run(_cfg_with_min(cfg, 100), FakeStore(beliefs, control))
     assert r.reached_sample and not r.passed
     assert "NOT PASSED" in r.render()
+
+
+def test_demo_runtime_does_not_require_ab_proof(cfg):
+    assert_live_ready(cfg, FakeStore([], []))
+
+
+def test_live_runtime_recomputes_ab_instead_of_trusting_flag(cfg):
+    live = cfg_with(cfg, mode="live")
+    with pytest.raises(LiveReadinessError, match="LIVE REFUSED"):
+        assert_live_ready(live, FakeStore([], []))
+
+
+def test_live_runtime_allows_a_database_result_that_really_passes(cfg):
+    import random
+
+    rng = random.Random(3)
+    beliefs = [rng.gauss(0.5, 1.0) for _ in range(150)]
+    control = [rng.gauss(0.0, 1.0) for _ in range(150)]
+    assert_live_ready(cfg_with(cfg, mode="live"), FakeStore(beliefs, control))

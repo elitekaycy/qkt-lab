@@ -10,3 +10,5 @@ venv/
 .pytest_cache/
 *.egg-info/
 .venv/
+botverify.txt
+journal-ui/node_modules/

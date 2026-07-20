@@ -1,11 +1,13 @@
-# The lab image: qkt CLI (JVM) + claude CLI (node) + python orchestration.
+# The lab image: qkt CLI (JVM) + Codex CLI (node) + python orchestration.
 #
 # QKT_IMAGE must carry the `qkt bot` command group; the published image does.
 # Override to pin a version, or to a local build when developing against qkt.
 ARG QKT_IMAGE=ghcr.io/elitekaycy/qkt:latest
+ARG CODEX_VERSION=0.144.5
 FROM ${QKT_IMAGE} AS qkt
 
 FROM debian:12-slim
+ARG CODEX_VERSION
 
 COPY --from=qkt /opt/java /opt/java
 COPY --from=qkt /opt/qkt /opt/qkt
@@ -13,7 +15,7 @@ ENV JAVA_HOME=/opt/java/runtime PATH="/opt/qkt/bin:/opt/java/runtime/bin:/usr/lo
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 python3-venv git ca-certificates curl nodejs npm \
- && npm install -g @anthropic-ai/claude-code \
+ && npm install -g "@openai/codex@${CODEX_VERSION}" \
  && curl -fsSL -o /usr/local/bin/supercronic \
       https://github.com/aptible/supercronic/releases/download/v0.2.33/supercronic-linux-amd64 \
  && chmod +x /usr/local/bin/supercronic \

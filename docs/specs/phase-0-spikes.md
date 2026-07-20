@@ -47,7 +47,7 @@ from trades it closes itself — which is most of them, but it would mean the
 `r_multiple` for every stopped-out trade is unrecoverable. That is fatal to the
 learning loop and we would need a different outcome source.
 
-## S0.3 — Deltalytix as the journal UI
+## S0.3 — Deltalytix as the journal UI (historical, superseded)
 
 **Assumption.** We can self-host Deltalytix and write trades into its Postgres
 directly, and they render — with rationale, tags, charts, calendar, and an

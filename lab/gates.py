@@ -13,6 +13,7 @@ wanted to do and what stopped it. Throwing them away would be the mistake.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -46,6 +47,60 @@ class Book:
     floating: float  # floating PnL on open lab tickets
 
 
+def check_quote(
+    quote: dict[str, Any],
+    *,
+    max_age_seconds: int,
+    now: datetime | None = None,
+) -> list[Reject]:
+    """Fail closed before invoking the model when venue prices are stale or malformed."""
+    now = now or datetime.now(UTC)
+    out: list[Reject] = []
+
+    numeric: dict[str, float] = {}
+    for field in ("bid", "ask", "timeMs"):
+        value = quote.get(field)
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            out.append(Reject("quote_integrity", f"quote {field} is missing or non-numeric"))
+            continue
+        if not math.isfinite(parsed):
+            out.append(Reject("quote_integrity", f"quote {field} is not finite"))
+            continue
+        numeric[field] = parsed
+
+    if "bid" in numeric and "ask" in numeric:
+        if numeric["bid"] <= 0 or numeric["ask"] <= 0:
+            out.append(Reject("quote_integrity", "bid and ask must both be positive"))
+        elif numeric["ask"] < numeric["bid"]:
+            out.append(
+                Reject(
+                    "quote_integrity",
+                    f"ask {numeric['ask']} is below bid {numeric['bid']}",
+                )
+            )
+
+    if "timeMs" in numeric:
+        quote_at = datetime.fromtimestamp(numeric["timeMs"] / 1000.0, tz=UTC)
+        age = (now - quote_at).total_seconds()
+        if age < -max_age_seconds:
+            out.append(
+                Reject(
+                    "quote_freshness",
+                    f"quote timestamp is {-age:.0f}s in the future",
+                )
+            )
+        elif age > max_age_seconds:
+            out.append(
+                Reject(
+                    "quote_freshness",
+                    f"quote is {age:.0f}s old (max {max_age_seconds}s)",
+                )
+            )
+    return out
+
+
 def check(
     cfg: Config,
     inst: Instrument,
@@ -73,10 +128,32 @@ def check(
     tp = proposal.get("tp")
     if cfg.gates.require_sl and sl is None:
         out.append(Reject("require_sl", "proposal has no stop-loss"))
+    if cfg.gates.min_rr > 0 and tp is None:
+        out.append(
+            Reject(
+                "require_tp",
+                f"proposal has no take-profit, so minimum rr {cfg.gates.min_rr} cannot be enforced",
+            )
+        )
+
+    prices = {"entry": entry, "sl": sl, "tp": tp}
+    invalid_prices = [
+        name
+        for name, value in prices.items()
+        if value is not None
+        and (not isinstance(value, (int, float)) or not math.isfinite(float(value)))
+    ]
+    if invalid_prices:
+        out.append(
+            Reject(
+                "price_integrity",
+                f"non-finite or non-numeric values: {', '.join(invalid_prices)}",
+            )
+        )
 
     # 3. Risk-reward, RECOMPUTED from real prices. The model's own expected_rr is
     #    never trusted — it is a claim, not a measurement.
-    if sl is not None and tp is not None and entry is not None:
+    if sl is not None and tp is not None and entry is not None and not invalid_prices:
         risk = abs(entry - sl)
         reward = abs(tp - entry)
         if risk <= 0:
@@ -97,6 +174,10 @@ def check(
             out.append(Reject("sl_direction", f"BUY with sl {sl} at/above entry {entry}"))
         if side == "SELL" and sl <= entry:
             out.append(Reject("sl_direction", f"SELL with sl {sl} at/below entry {entry}"))
+        if side == "BUY" and tp <= entry:
+            out.append(Reject("tp_direction", f"BUY with tp {tp} at/below entry {entry}"))
+        if side == "SELL" and tp >= entry:
+            out.append(Reject("tp_direction", f"SELL with tp {tp} at/above entry {entry}"))
 
     # 4. Sizing produced nothing tradeable.
     if lots <= 0:

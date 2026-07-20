@@ -7,23 +7,27 @@ tactical beliefs — the distiller and the scorer own those.
 
 ## Your output contract — durable artifacts, not prose
 
-Every run must end with files written (or edited) under `memory/`:
+Your workspace root is the repository's `memory/` directory. Every run must end
+with files written (or edited) inside that workspace:
 
-- `memory/map/<node>.md` — a causal-graph node or edge: entity, typed edges with
+- `map/<node>.md` — a causal-graph node or edge: entity, typed edges with
   `sign`/`strength`/`lag`/`dominates_when`/`inverts_when`, and an `evidence:`
   line computed from market data (use the stored procedures to fetch it).
-- `memory/sources/<source>.md` — a source card: what it's good for, what it's bad
+- `sources/<source>.md` — a source card: what it's good for, what it's bad
   at, and a dated track-record entry. You write the prose; the runner writes the
   usefulness score.
-- `memory/procedures/<id>.md` — a fetch recipe that worked: url, params, parser,
+- `procedures/<id>.md` — a fetch recipe that worked: url, params, parser,
   and a REAL validator (min_rows, freshness_days, value_range). Procedures are
   declarative fetch specs. NEVER write a shell command into a procedure — specs
   containing `command`/`shell`/`exec` are rejected at load, by design.
-- `memory/calendar/upcoming.yaml` — the gate's cache. Every high-impact event
+- `calendar/upcoming.yaml` — the gate's cache. Every high-impact event
   needs `at` (UTC, to the minute), `impact`, `affects`, and **at least two
   independent source URLs**. If you cannot corroborate a time, mark the event
   `confidence: uncertain` — the gate treats uncertainty as MORE dangerous, never
   less. Getting a print time wrong by an hour is worse than not listing it.
+  The YAML document MUST have a top-level `fetched_at` ISO-8601 UTC timestamp
+  and a top-level `events` list. Do not rename `fetched_at` to `as_of`; the
+  deterministic gate rejects any cache without that exact field.
 
 A paragraph of analysis that ends up in no file is a wasted run.
 

@@ -71,16 +71,31 @@ class Context:
         }
 
 
-def gather(cfg: Config, qkt: Qkt, inst: Instrument) -> Context:
-    now = datetime.now(UTC)
-    missing: list[str] = []
-
-    # Venue truth is the one non-optional source. If it's down, there is no cycle.
+def gather_venue(qkt: Qkt, inst: Instrument) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Fetch only the minimum preflight truth before any expensive bar work."""
     try:
         account = qkt.account(broker=inst.symbol.split(":")[0])
         quote = qkt.quote(inst.symbol)
     except QktError as e:
         raise ContextError(f"venue unavailable: {e}") from e
+    return account, quote
+
+
+def gather(
+    cfg: Config,
+    qkt: Qkt,
+    inst: Instrument,
+    *,
+    account: dict[str, Any] | None = None,
+    quote: dict[str, Any] | None = None,
+) -> Context:
+    now = datetime.now(UTC)
+    missing: list[str] = []
+
+    # The cycle normally supplies its already-checked preflight snapshot. Direct
+    # callers retain the same complete gather behavior.
+    if account is None or quote is None:
+        account, quote = gather_venue(qkt, inst)
 
     bars: dict[str, list[dict[str, Any]]] = {}
     for tf in inst.timeframes:
