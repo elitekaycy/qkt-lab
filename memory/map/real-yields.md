@@ -17,7 +17,14 @@ edges:
       Caveat: 10y NOMINAL used as proxy (DFII10 unreachable from the research
       session this run; runner fetches it fine — re-run with the real series).
       Sign-tally hand-computed 2026-07-13, tolerance ~±2 counts. Prior: rolling
-      60d corr mean -0.62 over 2006-2026, near zero 2023-2026.
+      60d corr mean -0.62 over 2006-2026, near zero 2023-2026. Week of
+      2026-07-13..16 re-confirms and rules out the dollar as confounder: gold
+      -2.9% (GC=F daily closes 4104.1 Jul 10 -> 3985.6 Jul 16) while 10y rose
+      to ~4.57% AND DXY fell 100.97 -> 100.74 — the down-move happened against
+      a falling dollar, so the yields leg, not [[usd-bid]] / [[dxy]], carried
+      it. Drivers: Hormuz oil shock hike-repricing ([[geopolitical-escalation]])
+      + strong claims/Philly Fed ([[growth-surprise]]); hold odds ~90% for the
+      Jul 29 FOMC (Kitco 2026-07-16). Nominal-proxy caveat still open.
 ---
 Gold pays no yield, so the real (inflation-adjusted) Treasury yield is the
 opportunity cost of holding it. Historically the single strongest macro channel

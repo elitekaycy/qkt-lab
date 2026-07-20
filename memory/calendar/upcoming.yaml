@@ -1,39 +1,294 @@
-fetched_at: "2026-07-17T00:00:00Z"
-window:
-  from: "2026-07-17T00:00:00Z"
-  through: "2026-07-24T23:59:00Z"
-instrument: "EXNESS:XAUUSD"
+# Written by RESEARCH 2026-07-20. Window: 2026-07-20 .. 2026-07-27 (+ FOMC-week
+# anchors through Jul 31). Rule: two independent source URLs or the event is
+# marked uncertain. Uncertain high-impact events gate HARDER, not softer — see
+# lab/calendar.py.
+#
+# OPS NOTES for the desk:
+# 1. Refresh cadence: fetched 06:03Z Mon Jul 20; crosses the 30h max_age at
+#    ~12:03Z Tue Jul 21. Structural fix still open: calendar_ok/calendar_reason
+#    exist in cycle.py but do not reach the decision packet, so a stale cache
+#    renders as "calendar: []" — indistinguishable from a quiet day.
+# 2. Weekend-packet anomaly CONTINUED through the whole Jul 18-19 weekend
+#    (17 tickets in the Jul 20 brief, Sat 09:00Z .. Sun 20:00Z), same alternating
+#    pattern: stale Friday-stamped quotes one hour, re-stamped "live-looking"
+#    weekend quotes/bars the next. NEW datum: a Sun ~20:00Z 1h bar with 5.3k
+#    volume, 2h+ before any documented reopen. Exness gold re-verified closed
+#    weekends (WebSearch 2026-07-20). Standing rule unchanged: the venue session
+#    table, not packet timestamps, decides liveness; nothing trades off Sat/Sun
+#    packets. The exact Sunday reopen minute is STILL unpinned (secondary
+#    sources contest ~22:00Z Sun vs ~01:00Z Mon) — tonight is moot (market now
+#    open), but Monday 00:00-01:00Z packets from Jul 20 would have shown it;
+#    next weekend's first live bar will. Full analysis in
+#    sources/exness-xauusd.md.
+# 3. Week shape unchanged from Jul 19 refresh: Jul 20-22 is data-quiet by
+#    construction — FOMC blackout runs Jul 18-30, no US hard data until Jul 23
+#    claims. Thu Jul 23 is the concentrated risk day: ECB decision 12:15Z +
+#    presser 12:45Z overlapping US claims and Chicago Fed NAI 12:30Z — treat
+#    12:00-13:30Z as one event-risk block. Fri Jul 24 adds flash PMIs + new
+#    home sales (13:45-14:30Z window). Survey data trades like hard data in
+#    this regime (Jul 16: Philly Fed 41.4 vs ~10 exp moved gold -$67).
+#    Non-USD prints not listed (GBP jobs Jul 21, CAD CPI Jul 21, AUD
+#    employment Jul 23, GBP retail sales Jul 24): gold-irrelevant, logged here
+#    so their absence below is a choice, not a miss. PBoC LPR (Jul 20 01:15Z)
+#    already printed before this fetch — dropped from the window.
+# 4. FOMC-week (Jul 27-31) detail now sourced: investrade's 27-31 page STILL
+#    404 (re-tried this fetch) and LiteFinance's 27.07-02.08 page not yet
+#    published, but Scotiabank's month page + BEA/Census primaries cover it.
+#    BEA (bea.gov/news/schedule) fetches fine from this session — new
+#    procedure written: procedures/bea-release-schedule.md.
+# 5. Durable goods DATE CONFLICT this refresh: Census primary says Mon Jul 27
+#    08:30 ET; today's Scotiabank read says Jul 28 (its Jul 17 read said
+#    Jul 27, consistent with Census). Possibly confusion with Census's
+#    "Advance Economic Indicators" on Jul 28. Kept at Jul 27 per the primary,
+#    downgraded to uncertain until a third source lands.
+fetched_at: "2026-07-20T06:03:00Z"
 events:
-  - id: "2026-07-23-ecb-policy-decision"
-    name: "ECB monetary policy decision"
+  - name: FOMC communications blackout (for Jul 28-29 meeting)
+    at: "2026-07-18T00:00:00Z"
+    impact: low
+    affects: [XAUUSD, USD]
+    confidence: confirmed
+    sources:
+      - https://www.federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf
+      - https://www.stlouisfed.org/about-us/resources/blackout-periods
+    note: >
+      ONGOING STATE, not a print: blackout Jul 18-30, no Fed speakers until the
+      meeting. Rate-path repricing comes from data and positioning only, which
+      concentrates the week's event risk into Jul 23-24.
+
+  - name: US leading indicators (June 2026)
+    at: "2026-07-20T14:00:00Z"
+    impact: low
+    affects: [XAUUSD, USD]
+    confidence: confirmed
+    sources:
+      - https://www.scotiabank.com/ca/en/about/economics/economics-publications/post.other-publications.calendar-of-economic-release-dates.calendar-of-economic-release-dates--july-2026-.html
+      - https://investrade.com/weekly-event-calendar-07-20-2026-07-24-2026/
+    note: >
+      10:00 ET, both sources re-verified 2026-07-20. Second-tier composite;
+      listed so Monday does not read as a zero-event day, not because it gates.
+
+  - name: UK CPI (June 2026)
+    at: "2026-07-22T06:00:00Z"
+    impact: low
+    affects: [XAUUSD, USD]
+    confidence: uncertain
+    sources:
+      - https://www.litefinance.org/blog/analysts-opinions/weekly-economic-calendar-for-20072026-26072026/
+      - https://www.scotiabank.com/ca/en/about/economics/economics-publications/post.other-publications.calendar-of-economic-release-dates.calendar-of-economic-release-dates--july-2026-.html
+    note: >
+      Date still contested (Scotiabank Jul 21 vs LiteFinance Jul 22; ONS
+      jobs-Tuesday/CPI-Wednesday convention favors Jul 22). Not re-verified
+      this refresh; kept uncertain on date. Affects gold only via GBP/DXY —
+      low stakes.
+
+  - name: US Treasury 20-year bond auction
+    at: "2026-07-22T17:00:00Z"
+    impact: low
+    affects: [XAUUSD, USD]
+    confidence: uncertain
+    sources:
+      - https://investrade.com/weekly-event-calendar-07-20-2026-07-24-2026/
+    note: >
+      $13B, 1:00 PM ET, re-verified 2026-07-20 but single source hence
+      uncertain. Listed because the real-yields channel is currently carrying
+      gold's daily direction — a tailed or strong auction moves 10y-30y yields
+      mid-session on an otherwise empty day.
+
+  - name: ECB rate decision
     at: "2026-07-23T12:15:00Z"
     impact: high
-    affects:
-      - "EXNESS:XAUUSD"
-      - "EUR"
-      - "USD"
-      - "European sovereign yields"
+    affects: [XAUUSD, USD, EURUSD]
     confidence: confirmed
     sources:
-      - "https://www.ecb.europa.eu/press/govcdec/html/index.en.html"
-      - "https://tickward.com/en/calendars/central-bank-meeting-dates"
-    notes: "ECB states 14:15 Frankfurt publication time; July is CEST (UTC+2). Date independently listed by Tickward."
+      - https://www.litefinance.org/blog/analysts-opinions/weekly-economic-calendar-for-20072026-26072026/
+      - https://www.scotiabank.com/ca/en/about/economics/economics-publications/post.other-publications.calendar-of-economic-release-dates.calendar-of-economic-release-dates--july-2026-.html
+      - https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html
+    note: >
+      Scotiabank (8:15 ET) re-verified 2026-07-20; LiteFinance 12:15 GMT and
+      the ECB's own Governing Council calendar (meeting Jul 22-23)
+      independently agree; financecalendar's 13:45 CET remains documented as a
+      miss. Live context: ECB HIKED 25bp on Jun 11 (deposit 2.25%); a
+      follow-up hike or hawkish pause moves EUR/USD, hence DXY, hence gold.
+      No new projections at this meeting — statement + presser carry the
+      signal.
 
-  - id: "2026-07-23-ecb-press-conference"
-    name: "ECB monetary policy press conference"
+  - name: US weekly jobless claims
+    at: "2026-07-23T12:30:00Z"
+    impact: high
+    affects: [XAUUSD, USD]
+    confidence: confirmed
+    sources:
+      - https://www.dol.gov/ui/data.pdf
+      - https://investrade.com/weekly-event-calendar-07-20-2026-07-24-2026/
+    note: >
+      8:30 ET Thursday — the fixed weekly slot (invariant for decades),
+      investrade re-verified 2026-07-20. The only US hard data inside the
+      blackout until Jul 24, landing 15 minutes after the ECB decision; the
+      Jul 16 print (208k, 10-week low) showed claims alone can drive a hawkish
+      gold flush. Treat 12:00-13:30Z as one event-risk block with the ECB
+      decision + presser.
+
+  - name: Chicago Fed national activity index (June 2026)
+    at: "2026-07-23T12:30:00Z"
+    impact: low
+    affects: [XAUUSD, USD]
+    confidence: uncertain
+    sources:
+      - https://investrade.com/weekly-event-calendar-07-20-2026-07-24-2026/
+    note: >
+      8:30 ET, re-verified 2026-07-20, single source hence uncertain.
+      Second-tier composite, but it prints inside the Jul 23 event block —
+      listed so a growth surprise there is not misattributed to claims alone.
+
+  - name: ECB press conference (Lagarde)
     at: "2026-07-23T12:45:00Z"
     impact: high
-    affects:
-      - "EXNESS:XAUUSD"
-      - "EUR"
-      - "USD"
-      - "European sovereign yields"
+    affects: [XAUUSD, USD, EURUSD]
     confidence: confirmed
     sources:
-      - "https://www.ecb.europa.eu/press/press_conference/html/index.en.html"
-      - "https://tickward.com/en/calendars/central-bank-meeting-dates"
-    notes: "ECB schedules its policy press conference for 14:45 Frankfurt time; July is CEST (UTC+2)."
+      - https://www.litefinance.org/blog/analysts-opinions/weekly-economic-calendar-for-20072026-26072026/
+      - https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html
+    note: >
+      12:45Z per LiteFinance (verified 2026-07-19), consistent with the
+      post-2022 convention (14:45 CEST) given the 12:15Z decision. Part of the
+      Jul 23 12:00-13:30Z block.
 
-notes:
-  - "No other high-impact scheduled macro release was identified in the UTC window. Routine weekly claims and regional/state releases were excluded."
-  - "Calendar checked against official Federal Reserve, BLS, BEA, Census, and ECB schedules on 2026-07-17."
+  - name: Kansas City Fed manufacturing survey (July)
+    at: "2026-07-23T15:00:00Z"
+    impact: medium
+    affects: [XAUUSD, USD]
+    confidence: uncertain
+    sources:
+      - https://investrade.com/weekly-event-calendar-07-20-2026-07-24-2026/
+    note: >
+      11:00 AM ET, re-verified 2026-07-20, single source hence uncertain.
+      Held at medium: Jul 16 proved regional Fed surveys (Philly 41.4 vs ~10
+      exp -> gold -$67) trade like hard data in this regime, and this is the
+      only afternoon print on the week's biggest event day.
+
+  - name: Japan CPI (June 2026)
+    at: "2026-07-23T23:30:00Z"
+    impact: low
+    affects: [XAUUSD]
+    confidence: uncertain
+    sources:
+      - https://www.scotiabank.com/ca/en/about/economics/economics-publications/post.other-publications.calendar-of-economic-release-dates.calendar-of-economic-release-dates--july-2026-.html
+    note: >
+      19:30 ET Jul 23 per Scotiabank (verified 2026-07-18) — single source,
+      uncertain on the exact minute. Gold-relevant only via JPY and
+      global-yield spillover; Asia session.
+
+  - name: Eurozone / Germany / UK flash PMIs (July)
+    at: "2026-07-24T07:30:00Z"
+    impact: medium
+    affects: [XAUUSD, USD, EURUSD]
+    confidence: uncertain
+    sources:
+      - https://www.litefinance.org/blog/analysts-opinions/weekly-economic-calendar-for-20072026-26072026/
+    note: >
+      Staggered 07:30Z (DE), 08:00Z (EZ), 08:30Z (UK) per LiteFinance
+      (verified 2026-07-19) — single source, hence uncertain. Day-after read
+      on the ECB decision; moves EUR hence DXY hence gold in the London
+      morning.
+
+  - name: US S&P Global flash PMIs (July)
+    at: "2026-07-24T13:45:00Z"
+    impact: high
+    affects: [XAUUSD, USD]
+    confidence: confirmed
+    sources:
+      - https://www.litefinance.org/blog/analysts-opinions/weekly-economic-calendar-for-20072026-26072026/
+      - https://investrade.com/weekly-event-calendar-07-20-2026-07-24-2026/
+    note: >
+      9:45 ET, investrade re-verified 2026-07-20 (all three of
+      manufacturing/services/composite flash). Inside the blackout data vacuum
+      this is Friday's only US growth read, and survey beats are trading
+      violently in this regime. Note Jul 17's lesson (map/growth-surprise.md):
+      read the composition before assuming a headline beat sticks.
+
+  - name: US new home sales (June 2026)
+    at: "2026-07-24T14:00:00Z"
+    impact: medium
+    affects: [XAUUSD, USD]
+    confidence: confirmed
+    sources:
+      - https://www.census.gov/economic-indicators/calendar-listview.html
+      - https://investrade.com/weekly-event-calendar-07-20-2026-07-24-2026/
+    note: >
+      10:00 ET, Census "New Residential Sales", both sources re-verified
+      2026-07-20. Fifteen minutes after the US flash PMIs — treat 13:45-14:30Z
+      as one window. Context from Jul 17: permits at a 10-month low,
+      single-family starts down 3 straight months — a soft print here would
+      confirm the housing-rollover read.
+
+  - name: US durable goods orders, advance (June 2026)
+    at: "2026-07-27T12:30:00Z"
+    impact: medium
+    affects: [XAUUSD, USD]
+    confidence: uncertain
+    sources:
+      - https://www.census.gov/economic-indicators/calendar-listview.html
+      - https://www.scotiabank.com/ca/en/about/economics/economics-publications/post.other-publications.calendar-of-economic-release-dates.calendar-of-economic-release-dates--july-2026-.html
+    note: >
+      DOWNGRADED confirmed -> uncertain this refresh: Census primary
+      (re-verified 2026-07-20) says Mon Jul 27 8:30 ET, but today's Scotiabank
+      read says Jul 28 — possibly conflating it with Census's separate
+      "Advance Economic Indicators" (trade/retail/wholesale) release on
+      Jul 28 12:30Z. Kept at Jul 27 per the primary. First hard data of FOMC
+      week either way; the cache must not present Jul 27-28 as quiet.
+
+  - name: US consumer confidence (July, Conference Board)
+    at: "2026-07-28T14:00:00Z"
+    impact: medium
+    affects: [XAUUSD, USD]
+    confidence: uncertain
+    sources:
+      - https://www.scotiabank.com/ca/en/about/economics/economics-publications/post.other-publications.calendar-of-economic-release-dates.calendar-of-economic-release-dates--july-2026-.html
+    note: >
+      10:00 ET per Scotiabank (fetched 2026-07-20), single source hence
+      uncertain. Anchored beyond the window: FOMC-eve sentiment print, same
+      morning as Richmond Fed (14:00Z) and Case-Shiller (13:00Z).
+
+  - name: FOMC rate decision + Warsh press conference
+    at: "2026-07-29T18:00:00Z"
+    impact: high
+    affects: [XAUUSD, USD]
+    confidence: confirmed
+    sources:
+      - https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+      - https://www.scotiabank.com/ca/en/about/economics/economics-publications/post.other-publications.calendar-of-economic-release-dates.calendar-of-economic-release-dates--july-2026-.html
+    note: >
+      Anchored beyond the window because it is rock-solid: statement 2:00 pm
+      ET, presser 2:30 pm ET. NO Summary of Economic Projections at this
+      meeting — statement wording and presser carry the whole signal. Market
+      pricing ~90% hold as of Jul 16 (Kitco); the week's data flow shifted the
+      risk toward the hawkish side.
+
+  - name: US Q2 advance GDP + June personal income/outlays (PCE)
+    at: "2026-07-30T12:30:00Z"
+    impact: high
+    affects: [XAUUSD, USD]
+    confidence: confirmed
+    sources:
+      - https://www.bea.gov/news/schedule
+      - https://www.scotiabank.com/ca/en/about/economics/economics-publications/post.other-publications.calendar-of-economic-release-dates.calendar-of-economic-release-dates--july-2026-.html
+    note: >
+      BOTH releases 8:30 ET, simultaneously, per BEA's own schedule (primary,
+      fetched 2026-07-20) and Scotiabank. The morning after the FOMC decision:
+      growth AND the Fed's inflation gauge in one print — the single densest
+      data moment of FOMC week. Eurozone Q2 GDP + unemployment print the same
+      morning 09:00Z (Scotiabank, single-source).
+
+  - name: US employment cost index (Q2 2026)
+    at: "2026-07-31T12:30:00Z"
+    impact: medium
+    affects: [XAUUSD, USD]
+    confidence: uncertain
+    sources:
+      - https://www.scotiabank.com/ca/en/about/economics/economics-publications/post.other-publications.calendar-of-economic-release-dates.calendar-of-economic-release-dates--july-2026-.html
+    note: >
+      8:30 ET per Scotiabank (fetched 2026-07-20), single source hence
+      uncertain (BLS primary is blocked from this session). Quarterly wage
+      gauge the Fed watches; prints alongside eurozone flash CPI 09:00Z and
+      ahead of Chicago PMI 13:45Z / UMich final 14:00Z the same day.

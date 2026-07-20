@@ -20,3 +20,22 @@ Track record:
 - 2026-07-13: times for CPI (Jul 14 8:30 ET), PPI (Jul 15 8:30 ET), retail
   sales (Jul 16 8:30 ET) all matched the BLS schedule and Census release
   schedule independently. Missed both Warsh testimonies and the Beige Book.
+- 2026-07-16: next week's page (weekly-event-calendar-07-20-2026-07-24-2026)
+  returned 404 on Thursday morning — pages appear to publish late in the prior
+  week. Cannot be the corroborating source for a refresh that runs mid-week
+  and reaches into the following week; Census list-view calendar filled the
+  gap this run.
+- 2026-07-17: its UMich Jul 17 10:00 ET time was corroborated by Scotiabank's
+  monthly calendar (upgraded that event to confirmed), and its Jul 13-17 week
+  of times held throughout — including retail sales/claims/Philly Fed at
+  8:30 ET Jul 16, verified against the actual print reaction. For weeks it
+  covers, its ET times remain the best available; the 404-until-late-week
+  limitation stands (scotiabank-econ-calendar now covers that gap).
+- 2026-07-18: the Jul 20-24 page that 404ed Thursday was live by Saturday
+  06:00Z — pages publish by the weekend, so weekend refreshes CAN use it for
+  the coming week. Corroborated US flash PMIs Fri 9:45 ET (promoting them to
+  confirmed), leading indicators Mon 10:00 ET, claims Thu 8:30 ET, new home
+  sales Fri 10:00 ET. Sole source this refresh for KC Fed manufacturing
+  (Thu 11:00 ET), Chicago Fed NAI (Thu 8:30 ET), and the 20y Treasury
+  auction (Wed 1:00 PM ET). Listed zero Fed speakers — correct this time
+  (blackout), so not diagnostic of the known Fed-events gap.
