@@ -17,7 +17,7 @@ docker compose up -d
 ```
 ┌─ compose ────────────────────────────────────────────────────────────┐
 │                                                                      │
-│  mt5-gateway      elitekaycy/mt5-gateway-api:0.3.3   (published)     │
+│  mt5-gateway      elitekaycy/mt5-gateway-api:0.3.4   (published)     │
 │      ▲                                                               │
 │      │ HTTP                                                          │
 │  lab              qkt-lab:local  ← qkt CLI + Codex CLI + python      │
@@ -136,7 +136,7 @@ the immutable PNG evidence.
 ### 4. qkt must be a *published* image, or nobody can run this
 
 Done: the lab Dockerfile builds `FROM ghcr.io/elitekaycy/qkt:latest`, published
-the way mt5-gateway publishes `elitekaycy/mt5-gateway-api:0.3.3`. There is no
+the way mt5-gateway publishes `elitekaycy/mt5-gateway-api:0.3.4`. There is no
 build-from-source step in the critical path; `QKT_IMAGE` overrides the base for
 development against a local qkt build. Licensing landed with it
 ([#8](../../issues/8) — qkt Apache-2.0, mt5-gateway MIT).
