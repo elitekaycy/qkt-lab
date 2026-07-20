@@ -16,6 +16,27 @@ QUESTION: pin the Friday close minute from inside the platform or via the
 runner. Until then treat 21:45Z Friday as the conservative last-live moment.
 
 Track record:
+- 2026-07-20: 17 more tickets, Sat Jul 18 09:00Z through Sun Jul 19 ~20:00Z —
+  the anomaly ran the ENTIRE weekend, same alternation as diagnosed Jul 19:
+  some packets carry stale Friday quotes (~24-40h old, correctly stamped),
+  others carry cached data RE-STAMPED live (quote timeMs matching packet
+  'now', in-progress bars opening on the current weekend hour). New datum: a
+  Sun ~19:00-20:00Z 1h bar with v=5300 and a live-looking quote — 2h+ before
+  even the earliest contested reopen (~22:00Z Sun per one secondary source;
+  ~01:00 GMT Mon per others). Volume on a re-stamped bar means the packet
+  builder synthesizes/copies volume too, so nonzero v is NOT evidence of a
+  live session. Web re-check 2026-07-20 (help-center still 403; secondary
+  pages incl. exness.com/blog, scribehow SEO pages): unanimous that Exness
+  gold is closed Sat/Sun — no weekend session launched. Alternative
+  explanation (venue reopened early Sunday) stays unfalsified only for the
+  19:00-20:00Z tickets; next weekend's first genuinely-live bar will pin the
+  reopen minute — OPEN QUESTION, worth one targeted check next Sunday.
+  Chart-pack lag also persisted: charts still ended Fri Jul 17 ~15:00Z in
+  Sat-afternoon packets. Standing flag to runner unchanged: session table
+  decides liveness, packet timestamps do not; nothing trades off Sat/Sun
+  packets. If weekend cycles are not going to be skipped by the scheduler,
+  they should at least be tagged market_closed so the distiller stops
+  raising one ticket per hour.
 - 2026-07-19: ~15 tickets spanning Sat Jul 18 01:00Z through Sun Jul 19 05:00Z
   show the packets ALTERNATING hour to hour between (a) stale reads — quote
   timeMs decoding to Friday ~20:00-21:00Z, price pinned at the ~4023 close —

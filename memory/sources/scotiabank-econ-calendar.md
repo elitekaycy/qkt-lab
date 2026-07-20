@@ -17,6 +17,16 @@ month page must exist for the month you need; untested whether next-month
 pages publish early.
 
 Track record:
+- 2026-07-20: fetched for FOMC-week (Jul 27-31) detail while investrade's
+  27-31 page still 404s — delivered the whole week: consumer confidence +
+  Richmond Fed + Case-Shiller Jul 28, FOMC Jul 29, Q2 advance GDP + personal
+  income/outlays Jul 30 (matches BEA primary), ECI + Chicago PMI + UMich
+  final Jul 31, plus eurozone Q2 GDP Jul 30 and flash CPI Jul 31. One MISS to
+  weigh against it: today's read put durable goods on Jul 28, contradicting
+  Census's primary (Jul 27) AND this page's own Jul 17 reading — likely
+  conflated with Census's Jul 28 "Advance Economic Indicators" release. First
+  recorded date error for this source; forced the cache's durables entry down
+  to uncertain.
 - 2026-07-17: ECB July decision listed at 8:15 ET (= 12:15Z), independently
   matching LiteFinance's 12:15 GMT — resolved the ECB time contest that
   financecalendar's 13:45 CET entry had forced to "uncertain". Also
