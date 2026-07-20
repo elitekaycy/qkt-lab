@@ -27,4 +27,3 @@ notes: COMEX front-month gold is a cross-check, not a substitute for EXNESS:XAUU
 # Yahoo chart cross-check for gold
 
 Declarative hourly gold-futures fetch for testing whether a purported XAUUSD move is broadly present in an independent market series. Contract rolls and basis mean price levels must not be treated as identical to spot.
-
